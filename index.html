@@ -871,7 +871,7 @@ async function buildDocuments() {
   planGoTo(4);
   const p = getPlanData();
   ['doc-pp-body','doc-soap-body','doc-zo-body'].forEach(id=>{
-    document.getElementById(id).textContent='Generating...';
+    document.getElementById(id).innerHTML='Generating...';
     document.getElementById(id).className='plan-body loading';
   });
 
@@ -893,9 +893,26 @@ Format as a clear patient-friendly document. Plain text only.`)
   ]);
 
   ['doc-pp-body','doc-soap-body','doc-zo-body'].forEach((id,i)=>{
-    document.getElementById(id).textContent=[ppDoc,soapDoc,zoDoc][i];
+    document.getElementById(id).innerHTML=mdToHtml([ppDoc,soapDoc,zoDoc][i]);
     document.getElementById(id).className='plan-body';
   });
+}
+
+function mdToHtml(text) {
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^# (.+)$/gm,'<h2 style="font-family:\'Cormorant Garamond\',serif;font-size:22px;font-weight:600;color:var(--plum);margin:20px 0 6px;">$1</h2>')
+    .replace(/^## (.+)$/gm,'<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:17px;font-weight:600;color:var(--mauved);margin:16px 0 4px;border-bottom:1px solid var(--border);padding-bottom:4px;">$1</h3>')
+    .replace(/^### (.+)$/gm,'<h4 style="font-size:13px;font-weight:700;color:var(--cocoa);margin:12px 0 4px;text-transform:uppercase;letter-spacing:0.5px;">$1</h4>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^---+$/gm,'<hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">')
+    .replace(/^- (.+)$/gm,'<li style="margin:3px 0;padding-left:4px;">$1</li>')
+    .replace(/(<li[\s\S]*?<\/li>)/g,'<ul style="list-style:disc;padding-left:20px;margin:6px 0;">$1</ul>')
+    .replace(/\n{2,}/g,'</p><p style="margin:0 0 8px;">')
+    .replace(/\n/g,'<br>')
+    .replace(/^(.)/,'<p style="margin:0 0 8px;">$1')
+    .concat('</p>');
 }
 
 async function callClaude(prompt) {
@@ -914,7 +931,7 @@ function switchDocTab(tab, el) {
 }
 
 function doCopy(id, btn) {
-  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+  navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>{
     btn.textContent='✓ Copied!'; btn.classList.add('copied');
     setTimeout(()=>{ btn.textContent='Copy for AR'; btn.classList.remove('copied'); },2000);
   });
