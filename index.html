@@ -259,6 +259,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
     <button class="mode-btn" onclick="switchMode('skincare',this)">&#x25C8; Skincare Protocol</button>
     <button class="mode-btn" onclick="switchMode('history',this)">&#x25C9; Patient History</button>
     <button class="mode-btn" onclick="switchMode('qualify',this)">&#x2605; Lead Qualifier</button>
+    <button class="mode-btn" onclick="switchMode('settings',this)">&#x2699; Pricing &amp; Packages</button>
   </div>
 </div>
 
@@ -724,6 +725,22 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
   <div id="lq-result-area"></div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- MODE 5: PRICING & PACKAGES                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="mode-settings" class="mode-panel">
+  <div class="section">
+    <div class="section-title">Pricing &amp; Packages</div>
+    <div class="section-sub">Changes save automatically and apply instantly to the Treatment Plan Builder and Lead Qualifier. No need to touch code.</div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="gen-btn" style="width:auto;padding:10px 24px;" onclick="savePricing()">Save Changes</button>
+      <button class="pbtn" onclick="resetPricing()">Reset to Defaults</button>
+      <span id="pricing-save-status" style="font-size:12px;color:var(--green);align-self:center;"></span>
+    </div>
+    <div id="pricing-form"></div>
+  </div>
+</div>
+
 </div><!-- end main -->
 
 <script>
@@ -733,6 +750,129 @@ function switchMode(mode, el) {
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('mode-'+mode).classList.add('visible');
   (el || event.target).classList.add('active');
+  if (mode === 'settings') renderPricingForm();
+}
+
+// ─── PRICING ENGINE ──────────────────────────────────────
+const PRICING_DEFAULTS = {
+  tox: [
+    { key:'foreheadGlabella', label:'Forehead + Glabella', price:600 },
+    { key:'crowsFeet',        label:"Crow's Feet",          price:300 },
+    { key:'lipFlip',          label:'Lip Flip',             price:150 },
+    { key:'masseter',         label:'Masseter',             price:960 },
+    { key:'platysmal',        label:'Platysmal Bands',      price:425 },
+    { key:'nefertiti',        label:'Nefertiti Lift',       price:1200 },
+    { key:'chin',             label:'Chin (Mentalis)',      price:150 },
+    { key:'daos',             label:'DAOs',                 price:150 },
+  ],
+  filler: [
+    { key:'cheeks',     label:'Cheek Volumization',   price:1999, note:'up to 3x Contour' },
+    { key:'jawline',    label:'Jawline Definition',   price:2500, note:'2x Defyne' },
+    { key:'temples',    label:'Temple Restoration',   price:1800, note:'2x Lyft' },
+    { key:'chin',       label:'Chin Alone',           price:950,  note:'1x Defyne' },
+    { key:'chinLip',    label:'Chin + Lip Balance',   price:1500, note:'1x Defyne + 1x Silk' },
+    { key:'tearTrough', label:'Tear Trough',          price:1100, note:'2x Eyelight 0.5cc' },
+    { key:'marionette', label:'Marionette Lines',     price:950,  note:'1x Refyne' },
+    { key:'nlf',        label:'Nasolabial Folds',     price:950,  note:'1x Refyne' },
+    { key:'lips',       label:'Lip Filler',           price:850,  note:'1x Silk' },
+  ],
+  biostim: [
+    { key:'sculptra2',  label:'Sculptra + ZO Kit (2 vials)',     price:1950 },
+    { key:'radiesse',   label:'HD Radiesse + ZO Kit (2 syringes)', price:1950 },
+    { key:'sculptra4',  label:'Sculptra 4-Vial Bundle',          price:3600 },
+  ],
+  devices: [
+    { key:'sylfirmFace',       label:'Sylfirm X RFMN – Face (per session)', price:1650 },
+    { key:'sylfirmNeck',       label:'Sylfirm X – Neck Add-on',             price:200 },
+    { key:'microneedling1',    label:'Microneedling (single)',               price:350 },
+    { key:'microneedling3',    label:'Microneedling Series of 3',           price:950 },
+    { key:'geneo1',            label:'Geneo Facial (single)',               price:275 },
+    { key:'geneo3',            label:'Geneo Series of 3',                  price:750 },
+    { key:'co2',               label:'CO2 Laser',                          price:1300 },
+    { key:'lightenTighten',    label:'Lighten & Tighten Package',          price:3800 },
+  ],
+  zo: [
+    { key:'dpd',     label:'Daily Power Defense',        price:190 },
+    { key:'gfs',     label:'Getting Skin Ready / GFS',   price:200 },
+    { key:'wtr',     label:'Wrinkle + Texture Repair',   price:168 },
+    { key:'spf',     label:'Smartone SPF',               price:54 },
+    { key:'pigment', label:'Pigment Control + HQ',       price:240 },
+  ],
+};
+
+const PRICING_SECTION_LABELS = {
+  tox:'Neurotoxin (Tox)',filler:'Filler — Per Area',
+  biostim:'Biostimulators',devices:'Devices & Packages',zo:'ZO Skin Health Retail'
+};
+
+function loadPricing() {
+  try { return JSON.parse(localStorage.getItem('drv_pricing')) || {}; } catch(e){ return {}; }
+}
+
+function getPricing() {
+  const saved = loadPricing();
+  const result = {};
+  Object.keys(PRICING_DEFAULTS).forEach(cat => {
+    result[cat] = PRICING_DEFAULTS[cat].map(item => ({
+      ...item,
+      price: (saved[cat] && saved[cat][item.key] !== undefined) ? saved[cat][item.key] : item.price
+    }));
+  });
+  return result;
+}
+
+function savePricing() {
+  const saved = {};
+  Object.keys(PRICING_DEFAULTS).forEach(cat => {
+    saved[cat] = {};
+    PRICING_DEFAULTS[cat].forEach(item => {
+      const el = document.getElementById('price-'+cat+'-'+item.key);
+      if (el) saved[cat][item.key] = parseFloat(el.value) || item.price;
+    });
+  });
+  localStorage.setItem('drv_pricing', JSON.stringify(saved));
+  const s = document.getElementById('pricing-save-status');
+  s.textContent = '✓ Saved — both builders updated';
+  setTimeout(() => s.textContent = '', 3000);
+}
+
+function resetPricing() {
+  if (!confirm('Reset all prices to defaults?')) return;
+  localStorage.removeItem('drv_pricing');
+  renderPricingForm();
+  const s = document.getElementById('pricing-save-status');
+  s.textContent = '✓ Reset to defaults';
+  setTimeout(() => s.textContent = '', 2000);
+}
+
+function renderPricingForm() {
+  const p = getPricing();
+  const html = Object.keys(PRICING_DEFAULTS).map(cat => `
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;color:var(--plum);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">${PRICING_SECTION_LABELS[cat]}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;">
+        ${p[cat].map(item => `
+          <div class="form-group" style="margin:0;">
+            <label>${item.label}${item.note?'<span style="font-weight:400;color:var(--warm-gray);"> — '+item.note+'</span>':''}</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="color:var(--warm-gray);font-size:14px;">$</span>
+              <input type="number" id="price-${cat}-${item.key}" value="${item.price}" min="0" step="1" style="width:120px;" onchange="savePricing()">
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+  document.getElementById('pricing-form').innerHTML = html;
+}
+
+function getPricingText() {
+  const p = getPricing();
+  const fmt = n => '$'+Number(n).toLocaleString();
+  const toxLines = p.tox.map(t => `- ${t.label}: ${fmt(t.price)}`).join('\n');
+  const fillerLines = p.filler.map(t => `- ${t.label}: ${fmt(t.price)}${t.note?' ('+t.note+')':''}`).join('\n');
+  const biostimLines = p.biostim.map(t => `- ${t.label}: ${fmt(t.price)}`).join('\n');
+  const deviceLines = p.devices.map(t => `- ${t.label}: ${fmt(t.price)}`).join('\n');
+  const zoLines = p.zo.map(t => `- ${t.label}: ${fmt(t.price)}`).join('\n');
+  return `TOX (per area):\n${toxLines}\n\nFILLER (per area — quote area price, never per syringe to non-members):\n${fillerLines}\nNOTE: Temple restoration — frame as "Restores the hollow that makes the face look tired and aged. Often done alongside cheeks."\n\nBIOSTIMULATORS:\n${biostimLines}\n\nDEVICES & PACKAGES:\n${deviceLines}\n\nZO RETAIL:\n${zoLines}`;
 }
 
 // ─── PLAN BUILDER STATE ───────────────────────────────────
@@ -774,45 +914,7 @@ async function buildTreatmentPlan() {
   const sys = `You are the Dr. V Medical Aesthetics Treatment Plan Builder for Dr. Vaidehi Patel MD, Pensacola FL.
 
 PRICING:
-TOX (per area):
-- Forehead + Glabella: $600
-- Crow's feet: $300
-- Lip flip: $150
-- Masseter (TMJ/slimming): $960
-- Platysmal bands: $425
-- Nefertiti lift: $1,200
-- Chin (mentalis): $150
-- DAOs: $150
-
-FILLER (per area — quote area price, never per syringe to non-members):
-- Cheek volumization: $1,999 (up to 3x Contour)
-- Jawline definition: $2,500 (2x Defyne)
-- Temple restoration: $1,800 (2x Lyft) — frame as "Restores the hollow that makes the face look tired and aged. Often done alongside cheeks."
-- Chin alone: $950 (1x Defyne)
-- Chin + Lip balance: $1,500 (1x Defyne + 1x Silk)
-- Tear trough: $1,100 (2x Eyelight 0.5cc)
-- Marionette lines: $950 (1x Refyne)
-- Nasolabial folds (NLF): $950 (1x Refyne)
-- Lip filler: $850
-
-BIOSTIMULATORS:
-- Sculptra + ZO kit: $1,950 (2 vials; kit included first-time)
-- HD Radiesse + ZO kit: $1,950 (2 syringes; kit included first-time)
-- 4-vial Sculptra bundle: $3,600
-
-DEVICES:
-- Sylfirm X RFMN face: $1,650/session + neck add-on $200/session
-- Microneedling: $350 single, series of 3 $950
-- Geneo facial: $275 single, series of 3 $750
-- CO2 laser: $1,300 (needs 6–8wk ZO preconditioning; high risk FST IV+ with melasma)
-- Lighten & Tighten package (RFMN x3 + skincare kit + 1 free CO2): $3,800
-
-ZO RETAIL:
-- Daily Power Defense: $190
-- Getting Skin Ready / GFS: $200
-- Wrinkle + Texture Repair: $168
-- Smartone SPF: $54
-- Pigment Control + Blending Crème (HQ): $240
+${getPricingText()}
 
 CLINICAL RULES:
 - Every plan: ZO skincare + tox as foundation
@@ -1210,7 +1312,10 @@ function lqToggleService(el){
   lqSelectedServices=[].slice.call(document.querySelectorAll('#lq-service-grid .lq-service-chip.selected')).map(function(c){return c.textContent.trim();});
 }
 
-const LQ_SYSTEM='You are the in-room Lead Qualifier for Dr. V Medical Aesthetics (Pensacola FL). Staff enters a lead name, service interest, and any known context. You apply full practice knowledge to return a structured qualification decision.\n\nPRACTICE RULES:\n- Provider (Anna NP): Thu & Fri only, 11am-8pm. New aesthetic leads go here.\n- Dr. V (MD): Established patients only. Wellness/hormone. Bloom & Rise.\n- Consult: $100, credited toward same-day treatment.\n- $25 booking fee for non-members (auto-collected, credited same-day).\n- Booking portal: https://api.leadconnectorhq.com/widget/bookings/anna-crisco-personal-calendar-yuabbvabw\n\nNEUROTOXIN:\n- Brands: Dysport, Xeomin. NEVER say Botox.\n- By area (never per-unit to non-members): Forehead $600, Crow feet $300, Masseter $960 (sticker-shock qualify), Nefertiti $1200 (sticker-shock), Hyperhidrosis $1000 (sticker-shock), Lip flip $150, Bunny lines $100.\n- Bank Your Botox: $120/mo, 10 units at $12/unit.\n\nFILLER:\n- Brands: Restylane line. NEVER say Juvederm.\n- Lip filler starts ~$850. Other areas $850-$950.\n- LIP FILLER PRESCREENING (in-room): cold sore/HSV history (Valtrex needed); blood thinners (flag provider); 3 lip photos needed; prior filler history; chin/jaw goals = price higher.\n- Cushion rule: quote 1 extra syringe for all non-lip areas.\n- P-Shot: $1950 provider / $2100 Dr. V. O-Shot: $1300 provider / $1400 Dr. V.\n\nLASER HAIR REMOVAL:\n- Diode 810nm. Screen hair color first.\n- NOT A CANDIDATE: white, gray, red, blonde hair.\n- CANDIDATE: brown or black hair.\n- Sun/spray tan past 3-4 weeks = wait. Pregnant = wait. Accutane past 6 months = wait. PCOS = still works.\n- Pricing (3-session/8-session): Upper Lip $399/$975; Underarms/Bikini/Chin/Neck $475/$1150; Full Face $599/$1475; Lower Arms $675/$1650; Brazilian/Chest $945/$2295; Full Back/Full Legs $1075/$2625.\n\nTATTOO REMOVAL:\n- Q-Switch. No consult for XS/S/M/L. XL = consult.\n- Must be 12+ weeks old. Per session (black/color): XS $125/$150; S $175/$200; M $250/$300; L $375/$450.\n\nIPL:\n- NEVER say patient is a candidate or cleared. Provider makes final call.\n- GREEN: fair skin FST I-III, no recent sun, spots/redness concerns.\n- YELLOW: medium-tan skin, recent sun, melasma, photosensitizing meds, cold sore history, active acne.\n- RED: pregnant, active tan, on Accutane, open lesions, keloid history, lupus, changing mole.\n- Series (6 sessions + ZO kit): Full Face $2325; Face+Neck $3135; Face+Neck+Chest $3945. Maintenance: Full Face $175; Face+Neck $275.\n\nCO2 LASER: $1300 (ZO prep kit included). Sticker-shock qualify. 6-8 weeks ZO preconditioning.\n\nBLOOM & RISE:\n- Bloom (female): O-Shot + PRF + Xeomin = $2100. Provider and Dr. V.\n- Rise (male): P-Shot + PRF + Xeomin = $2500. Provider and Dr. V.\n- $100 consult, credited. NEVER say just an O-Shot.\n\nVAMPIRE BREAST LIFT: $1949 single / $3649 x2. Sticker-shock. NEVER say: adds volume, increases cup size.\n\nIV THERAPY: First visit $100 consult (credited). Myers $175, High-C $200, NAD+ $400-600, Hydration $125.\nVITAMIN INJECTIONS (no consult): B12 $35, Lipo-C $45, Glutathione IM $75, Vit D $40.\nWEIGHT LOSS: $100 consult credited. Semaglutide/Tirzepatide.\nHORMONE CONSULT: $350 NOT credited. Dr. V only. Prescreening required before booking.\nGENEO FACIAL: $275. No consult.\nMICRONEEDLING: $350/session or $950 series of 3.\nRF MICRONEEDLING (Sylfirm): $1650/session or $3800 Lighten & Tighten.\n\nSTICKER-SHOCK (required before quoting >$950): Frame it before the number.\nMEMBERSHIPS: LHR $50 activation, area locked. Tattoo $50 activation, 30-min $250/mo.\nPOST-TREATMENT URGENT (breathing trouble, severe swelling, vision changes, chest pain): ER immediately.\n\nReturn ONLY valid JSON, no markdown:\n{"status":"BOOK NOW|NEEDS CONSULT|FLAG FOR PROVIDER|NOT A CANDIDATE|GET MORE INFO","statusReason":"one sentence","script":"2-4 natural sentences staff says to lead","priceToQuote":"specific price or empty string","nextStep":"exact next action","flags":["array of flags or empty"],"membershipPitch":"brief pitch or empty string"}';
+function getLQSystem() {
+  const pr = getPricingText();
+  return 'You are the in-room Lead Qualifier for Dr. V Medical Aesthetics (Pensacola FL). Staff enters a lead name, service interest, and any known context. You apply full practice knowledge to return a structured qualification decision.\n\nPRACTICE RULES:\n- Provider (Anna NP): Thu & Fri only, 11am-8pm. New aesthetic leads go here.\n- Dr. V (MD): Established patients only. Wellness/hormone. Bloom & Rise.\n- Consult: $100, credited toward same-day treatment.\n- $25 booking fee for non-members (auto-collected, credited same-day).\n- Booking portal: https://api.leadconnectorhq.com/widget/bookings/anna-crisco-personal-calendar-yuabbvabw\n\nCURRENT PRICING (use these exact numbers — updated by practice admin):\n'+pr+'\n\nNEUROTOXIN:\n- Brands: Dysport, Xeomin. NEVER say Botox.\n- Quote tox by area from CURRENT PRICING above (never per-unit to non-members).\n- Bank Your Botox: $120/mo, 10 units at $12/unit.\n\nFILLER:\n- Brands: Restylane line. NEVER say Juvederm.\n- Quote per-area prices from CURRENT PRICING above.\n- LIP FILLER PRESCREENING (in-room): cold sore/HSV history (Valtrex needed); blood thinners (flag provider); 3 lip photos needed; prior filler history; chin/jaw goals = price higher.\n- P-Shot: $1950 provider / $2100 Dr. V. O-Shot: $1300 provider / $1400 Dr. V.\n\nLASER HAIR REMOVAL:\n- Diode 810nm. Screen hair color first.\n- NOT A CANDIDATE: white, gray, red, blonde hair.\n- CANDIDATE: brown or black hair.\n- Sun/spray tan past 3-4 weeks = wait. Pregnant = wait. Accutane past 6 months = wait. PCOS = still works.\n- Pricing (3-session/8-session): Upper Lip $399/$975; Underarms/Bikini/Chin/Neck $475/$1150; Full Face $599/$1475; Lower Arms $675/$1650; Brazilian/Chest $945/$2295; Full Back/Full Legs $1075/$2625.\n\nTATTOO REMOVAL:\n- Q-Switch. No consult for XS/S/M/L. XL = consult.\n- Must be 12+ weeks old. Per session (black/color): XS $125/$150; S $175/$200; M $250/$300; L $375/$450.\n\nIPL:\n- NEVER say patient is a candidate or cleared. Provider makes final call.\n- GREEN: fair skin FST I-III, no recent sun, spots/redness concerns.\n- YELLOW: medium-tan skin, recent sun, melasma, photosensitizing meds, cold sore history, active acne.\n- RED: pregnant, active tan, on Accutane, open lesions, keloid history, lupus, changing mole.\n- Series (6 sessions + ZO kit): Full Face $2325; Face+Neck $3135; Face+Neck+Chest $3945. Maintenance: Full Face $175; Face+Neck $275.\n\nCO2 LASER: use price from CURRENT PRICING above. ZO prep kit included. Sticker-shock qualify. 6-8 weeks ZO preconditioning.\n\nBLOOM & RISE:\n- Bloom (female): O-Shot + PRF + Xeomin = $2100. Provider and Dr. V.\n- Rise (male): P-Shot + PRF + Xeomin = $2500. Provider and Dr. V.\n- $100 consult, credited. NEVER say just an O-Shot.\n\nVAMPIRE BREAST LIFT: $1949 single / $3649 x2. Sticker-shock. NEVER say: adds volume, increases cup size.\n\nIV THERAPY: First visit $100 consult (credited). Myers $175, High-C $200, NAD+ $400-600, Hydration $125.\nVITAMIN INJECTIONS (no consult): B12 $35, Lipo-C $45, Glutathione IM $75, Vit D $40.\nWEIGHT LOSS: $100 consult credited. Semaglutide/Tirzepatide.\nHORMONE CONSULT: $350 NOT credited. Dr. V only. Prescreening required before booking.\nGENEO FACIAL: use price from CURRENT PRICING above. No consult.\nMICRONEEDLING: use price from CURRENT PRICING above.\nRF MICRONEEDLING (Sylfirm): use price from CURRENT PRICING above.\n\nSTICKER-SHOCK (required before quoting >$950): Frame it before the number.\nMEMBERSHIPS: LHR $50 activation, area locked. Tattoo $50 activation, 30-min $250/mo.\nPOST-TREATMENT URGENT (breathing trouble, severe swelling, vision changes, chest pain): ER immediately.\n\nReturn ONLY valid JSON, no markdown:\n{"status":"BOOK NOW|NEEDS CONSULT|FLAG FOR PROVIDER|NOT A CANDIDATE|GET MORE INFO","statusReason":"one sentence","script":"2-4 natural sentences staff says to lead","priceToQuote":"specific price or empty string","nextStep":"exact next action","flags":["array of flags or empty"],"membershipPitch":"brief pitch or empty string"}';
+}
 
 async function qualifyLead(){
   const name=document.getElementById('lq-name').value.trim()||'the lead';
@@ -1222,7 +1327,7 @@ async function qualifyLead(){
   document.getElementById('lq-result-area').innerHTML='<div style="padding:20px;text-align:center;"><div class="spinner"></div></div>';
   const msg='Lead name: '+name+'\nPatient type: '+(existing==='yes'?'Existing patient':existing==='member'?'Active member':'New lead')+'\nService interest: '+lqSelectedServices.join(', ')+'\n'+(context?'Additional context: '+context:'')+'\nQualify this lead.';
   try{
-    const res=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:LQ_SYSTEM,messages:[{role:'user',content:msg}]})});
+    const res=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:getLQSystem(),messages:[{role:'user',content:msg}]})});
     const data=await res.json();
     const text=data.content&&data.content[0]?data.content[0].text:'{}';
     let result;
