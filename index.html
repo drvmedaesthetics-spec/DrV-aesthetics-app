@@ -809,6 +809,39 @@ function loadPricing() {
   try { return JSON.parse(localStorage.getItem('drv_pricing')) || {}; } catch(e){ return {}; }
 }
 
+async function syncPricingFromSheet() {
+  try {
+    const r = await fetch('/api/sheets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action:'read', sheetId:SHEET_ID, range:'Config!A1:B1' })
+    });
+    const d = await r.json();
+    const rows = d.result && d.result.values;
+    if (rows && rows[0] && rows[0][1]) {
+      const remote = JSON.parse(rows[0][1]);
+      localStorage.setItem('drv_pricing', JSON.stringify(remote));
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+async function pushPricingToSheet(saved) {
+  try {
+    await fetch('/api/sheets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'write',
+        sheetId: SHEET_ID,
+        range: 'Config!A1:B1',
+        values: [['pricing_json', JSON.stringify(saved)]]
+      })
+    });
+  } catch(e) {}
+}
+
 function getPricing() {
   const saved = loadPricing();
   const result = {};
@@ -821,7 +854,7 @@ function getPricing() {
   return result;
 }
 
-function savePricing() {
+async function savePricing() {
   const saved = {};
   Object.keys(PRICING_DEFAULTS).forEach(cat => {
     saved[cat] = {};
@@ -832,8 +865,10 @@ function savePricing() {
   });
   localStorage.setItem('drv_pricing', JSON.stringify(saved));
   const s = document.getElementById('pricing-save-status');
-  s.textContent = '✓ Saved — both builders updated';
-  setTimeout(() => s.textContent = '', 3000);
+  s.textContent = '⟳ Syncing to all devices...';
+  await pushPricingToSheet(saved);
+  s.textContent = '✓ Saved & synced — all iPads and desktops will update';
+  setTimeout(() => s.textContent = '', 4000);
 }
 
 function resetPricing() {
@@ -1357,7 +1392,15 @@ async function saveLQToLog(name,services,result){
   try{await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'LeadLog',values:[[new Date().toISOString(),name,services.join(', '),result.status,result.statusReason,result.priceToQuote,result.nextStep,(result.flags||[]).join('; ')]]})});}catch(e){}
 }
 
-document.addEventListener('DOMContentLoaded',function(){phRenderList();});
+document.addEventListener('DOMContentLoaded', async function() {
+  phRenderList();
+  // Pull latest pricing from sheet so all devices stay in sync
+  const synced = await syncPricingFromSheet();
+  if (synced) {
+    // If settings tab is already open, refresh the form
+    if (document.getElementById('mode-settings').classList.contains('visible')) renderPricingForm();
+  }
+});
 </script>
 </body>
 </html>

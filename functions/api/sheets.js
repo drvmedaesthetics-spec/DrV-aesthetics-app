@@ -55,6 +55,13 @@ export async function onRequestPost(context) {
         headers: { Authorization: `Bearer ${token}` }
       });
       result = await r.json();
+    } else if (action === 'write') {
+      const r = await fetch(`${base}/values/${encodeURIComponent(range)}?valueInputOption=RAW`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ range, values })
+      });
+      result = await r.json();
     }
     return new Response(JSON.stringify({ ok: true, result }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
   } catch (err) {
