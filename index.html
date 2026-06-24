@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dr. V Aesthetics — Clinical Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --gold:#B8965A;--gold-light:#D4B483;--gold-pale:#F5EDD8;
+  --navy:#0D1B2A;--navy-mid:#1A2E42;--cream:#FAFAF7;
+  --warm-gray:#6B6560;--red:#C0392B;--amber:#D97706;
+  --green:#16A34A;--blue:#1D4ED8;--border:#E8E0D0;--purple:#7C3AED;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--navy);min-height:100vh;}
+
+.hdr{background:var(--navy);padding:14px 24px;border-bottom:3px solid var(--gold);}
+.hdr-inner{max-width:1060px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.logo{font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:20px;letter-spacing:3px;font-weight:300;}
+.logo span{color:#fff;font-size:10px;display:block;letter-spacing:2px;margin-top:1px;opacity:0.5;font-family:'DM Sans',sans-serif;}
+.badge{background:var(--gold);color:var(--navy);font-size:10px;padding:4px 10px;border-radius:2px;letter-spacing:1px;font-weight:600;}
+
+/* MODE SWITCHER */
+.mode-bar{background:var(--navy-mid);border-bottom:1px solid rgba(255,255,255,0.08);}
+.mode-inner{max-width:1060px;margin:0 auto;display:flex;}
+.mode-btn{padding:12px 24px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;color:rgba(255,255,255,0.45);cursor:pointer;border-bottom:3px solid transparent;transition:all 0.15s;font-family:'DM Sans',sans-serif;background:none;border-top:none;border-left:none;border-right:none;}
+.mode-btn:hover{color:rgba(255,255,255,0.7);}
+.mode-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+.main{max-width:1060px;margin:0 auto;padding:24px 16px;}
+.mode-panel{display:none;}
+.mode-panel.visible{display:block;}
+
+/* SHARED COMPONENTS */
+.section{background:#fff;border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px;}
+.section-title{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;margin-bottom:4px;color:var(--navy);}
+.section-sub{font-size:12px;color:var(--warm-gray);margin-bottom:16px;}
+.row-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.form-group label{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--warm-gray);margin-bottom:6px;font-weight:600;}
+.form-group select,.form-group input,.form-group textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--navy);outline:none;}
+.form-group select:focus,.form-group input:focus,.form-group textarea:focus{border-color:var(--gold);}
+.form-group textarea{min-height:70px;resize:vertical;}
+.check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;}
+.check-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:all 0.15s;user-select:none;}
+.check-item:hover{border-color:var(--gold);background:var(--gold-pale);}
+.check-item.selected{border-color:var(--navy);background:var(--navy);color:#fff;}
+.check-item input{accent-color:var(--gold);width:14px;height:14px;}
+.check-label{font-size:13px;font-weight:500;}
+.contra-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;}
+.contra-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;transition:all 0.15s;}
+.contra-item:hover{border-color:var(--red);}
+.contra-item.selected{border-color:var(--red);background:#FEF2F2;color:var(--red);}
+.gen-btn{width:100%;padding:14px;background:var(--navy);color:var(--gold);border:none;border-radius:6px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:background 0.2s;margin-top:4px;}
+.gen-btn:hover{background:var(--navy-mid);}
+.gen-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.warning-box{background:#FEF2F2;border:1px solid #FCA5A5;border-radius:6px;padding:14px;margin-bottom:12px;}
+.warning-title{font-size:12px;font-weight:700;color:var(--red);margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase;}
+.warning-text{font-size:13px;color:#7F1D1D;line-height:1.5;}
+
+/* OUTPUT SHARED */
+.output{display:none;}
+.output.visible{display:block;}
+.out-section{background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:16px;overflow:hidden;}
+.out-header{padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+.out-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;}
+.out-badge{font-size:10px;padding:3px 10px;border-radius:10px;letter-spacing:0.5px;font-weight:600;}
+.badge-blue{background:#EFF6FF;color:var(--blue);border:1px solid #93C5FD;}
+.badge-gold{background:var(--gold-pale);color:#92400E;border:1px solid var(--gold-light);}
+.badge-green{background:#F0FDF4;color:var(--green);border:1px solid #86EFAC;}
+.badge-red{background:#FEF2F2;color:var(--red);border:1px solid #FCA5A5;}
+.badge-purple{background:#F5F3FF;color:var(--purple);border:1px solid #C4B5FD;}
+.out-body{padding:18px 20px;}
+
+/* PROTOCOL TABLE */
+.proto-table{width:100%;border-collapse:collapse;margin-bottom:12px;}
+.proto-table th{background:var(--gold-pale);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--warm-gray);padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);}
+.proto-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top;}
+.proto-table tr:last-child td{border-bottom:none;}
+.proto-table tr:hover td{background:#FAFAF7;}
+.am-pill{display:inline-block;padding:2px 7px;background:#EFF6FF;color:var(--blue);border-radius:3px;font-size:10px;font-weight:600;margin:1px;}
+.pm-pill{display:inline-block;padding:2px 7px;background:#F5F3FF;color:var(--purple);border-radius:3px;font-size:10px;font-weight:600;margin:1px;}
+.why-text{font-size:11px;color:var(--warm-gray);margin-top:3px;line-height:1.5;}
+
+/* TIMELINE */
+.timeline{display:flex;flex-direction:column;gap:0;}
+.tl-item{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:12px 0;border-bottom:1px solid var(--border);}
+.tl-item:last-child{border-bottom:none;}
+.tl-week{font-size:11px;font-weight:600;color:var(--gold);letter-spacing:0.5px;text-transform:uppercase;padding-top:2px;}
+.tl-phase{font-size:12px;color:var(--warm-gray);margin-top:2px;}
+.tl-content{font-size:13px;line-height:1.6;}
+.tl-flag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600;margin-left:6px;}
+.flag-normal{background:#F0FDF4;color:var(--green);}
+.flag-watch{background:#FFFBEB;color:var(--amber);}
+.flag-stop{background:#FEF2F2;color:var(--red);}
+
+/* MODALITY CARDS */
+.mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.mod-card{border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.mod-card-header{padding:10px 14px;background:var(--navy);color:#fff;display:flex;justify-content:space-between;align-items:center;}
+.mod-card-title{font-size:13px;font-weight:600;}
+.mod-card-price{font-size:12px;color:var(--gold-light);}
+.mod-card-body{padding:12px 14px;}
+.mod-card-why{font-size:12px;color:var(--warm-gray);line-height:1.5;margin-bottom:8px;}
+.mod-card-timing{font-size:11px;color:var(--blue);font-weight:500;}
+.mod-card-membership{font-size:10px;background:var(--gold-pale);color:#92400E;padding:3px 8px;border-radius:3px;display:inline-block;margin-top:6px;}
+
+/* MEMBERSHIP */
+.mem-rec{border-radius:6px;padding:16px;margin-bottom:12px;border:2px solid var(--gold);background:var(--gold-pale);}
+.mem-rec-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold);margin-bottom:6px;}
+.mem-rec-why{font-size:13px;line-height:1.6;margin-bottom:10px;}
+.mem-savings{display:flex;gap:16px;flex-wrap:wrap;}
+.mem-saving-item{text-align:center;background:rgba(0,0,0,0.05);padding:8px 14px;border-radius:4px;}
+.mem-saving-val{font-size:18px;font-weight:700;color:var(--green);}
+.mem-saving-label{font-size:10px;color:var(--warm-gray);text-transform:uppercase;letter-spacing:0.5px;}
+
+/* SCRIPT BOX */
+.script-box{background:var(--navy);color:#fff;border-radius:6px;padding:16px 18px;font-size:13px;line-height:1.8;font-style:italic;margin-bottom:12px;}
+.script-note{font-size:11px;color:var(--gold-light);font-style:normal;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.1);}
+
+/* DONT LIST */
+.dont-list{list-style:none;}
+.dont-list li{padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;}
+.dont-list li:last-child{border-bottom:none;}
+.dont-list li::before{content:"⛔";font-size:12px;margin-top:1px;flex-shrink:0;}
+
+/* PATIENT TEXT */
+.patient-text-box{width:100%;border:1px solid var(--border);border-radius:4px;padding:14px;font-size:13px;line-height:1.8;font-family:'DM Sans',sans-serif;resize:vertical;min-height:280px;background:#FAFAF7;color:var(--navy);outline:none;}
+.copy-btn{background:var(--gold);color:#fff;border:none;padding:9px 22px;border-radius:3px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:background 0.2s;}
+.copy-btn:hover{background:var(--gold-light);}
+.copy-btn.copied{background:var(--green);}
+
+/* PLAN BUILDER SPECIFIC */
+.step-bar{display:flex;margin-bottom:20px;border-radius:6px;overflow:hidden;border:1px solid var(--border);}
+.pb-step{flex:1;padding:10px 8px;text-align:center;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--warm-gray);background:#fff;cursor:pointer;border-right:1px solid var(--border);transition:background 0.15s;}
+.pb-step:last-child{border-right:none;}
+.pb-step.active{background:var(--navy);color:var(--gold);}
+.pb-step.done{background:var(--gold-pale);color:#92400E;}
+.pb-section{display:none;}
+.pb-section.visible{display:block;}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{padding:7px 14px;border-radius:99px;border:1px solid var(--border);font-size:12px;cursor:pointer;background:#fff;color:var(--navy);transition:all 0.12s;user-select:none;}
+.chip.selected{background:var(--navy);color:#fff;border-color:var(--navy);}
+.chip:hover:not(.selected){background:var(--gold-pale);border-color:var(--gold);}
+.btn-row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;}
+.pbtn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:4px;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--navy);transition:all 0.12s;font-family:'DM Sans',sans-serif;}
+.pbtn:hover{background:var(--gold-pale);}
+.pbtn-primary{background:var(--navy);color:var(--gold);border-color:var(--navy);}
+.pbtn-primary:hover{background:var(--navy-mid);}
+.pbtn:active{transform:scale(0.98);}
+.plan-out-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:14px;}
+.plan-out-card h3{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;margin-bottom:10px;}
+.plan-body{font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--navy);}
+.plan-body.loading{color:var(--warm-gray);font-style:italic;}
+.phase-pill{display:inline-block;font-size:10px;font-weight:600;padding:3px 10px;border-radius:99px;margin-bottom:8px;letter-spacing:0.5px;text-transform:uppercase;}
+.ph1{background:#E1F5EE;color:#085041;}
+.ph2{background:#EFF6FF;color:#1e40af;}
+.ph3{background:#F5F3FF;color:#5b21b6;}
+.phmaint{background:var(--gold-pale);color:#92400E;}
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.log-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 12px;border-radius:99px;background:#F0FDF4;color:var(--green);border:1px solid #86EFAC;margin-bottom:14px;}
+.sheet-link{font-size:12px;color:var(--blue);text-decoration:underline;cursor:pointer;margin-left:12px;}
+.docs-tab-row{display:flex;margin-bottom:16px;border-radius:6px;overflow:hidden;border:1px solid var(--border);}
+.docs-tab{flex:1;padding:10px;text-align:center;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#fff;color:var(--warm-gray);border-right:1px solid var(--border);transition:background 0.12s;font-family:'DM Sans',sans-serif;}
+.docs-tab:last-child{border-right:none;}
+.docs-tab.active{background:var(--navy);color:var(--gold);}
+.doc-panel{display:none;}
+.doc-panel.visible{display:block;}
+
+@media(max-width:600px){
+  .check-grid{grid-template-columns:1fr 1fr;}
+  .mod-grid{grid-template-columns:1fr;}
+  .tl-item{grid-template-columns:80px 1fr;}
+  .mem-savings{flex-direction:column;}
+  .mode-btn{padding:10px 14px;font-size:10px;}
+}
+
+/* PATIENT HISTORY */
+.ph-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.ph-search{padding:9px 14px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-family:'DM Sans',sans-serif;width:240px;background:var(--cream);color:var(--navy);outline:none;}
+.ph-search:focus{border-color:var(--gold);}
+.ph-action-btn{padding:9px 18px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:background 0.15s;}
+.ph-btn-primary{background:var(--navy);color:var(--gold);}
+.ph-btn-primary:hover{background:var(--navy-mid);}
+.ph-btn-gold{background:var(--gold);color:#fff;}
+.ph-btn-gold:hover{background:var(--gold-light);}
+.ph-btn-outline{background:#fff;color:var(--navy);border:1px solid var(--border)!important;}
+.ph-btn-outline:hover{background:var(--gold-pale);}
+.ph-patient-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:10px;cursor:pointer;transition:border-color 0.15s;display:flex;justify-content:space-between;align-items:center;}
+.ph-patient-card:hover{border-color:var(--gold);}
+.ph-patient-name{font-size:15px;font-weight:600;font-family:'Cormorant Garamond',serif;}
+.ph-patient-meta{font-size:12px;color:var(--warm-gray);margin-top:3px;}
+.ph-visit-count{font-size:12px;color:var(--blue);font-weight:600;}
+.ph-empty{text-align:center;padding:48px 20px;color:var(--warm-gray);font-size:14px;}
+.ph-back{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--blue);cursor:pointer;margin-bottom:16px;background:none;border:none;font-family:'DM Sans',sans-serif;}
+.ph-back:hover{text-decoration:underline;}
+.ph-visit-table{width:100%;border-collapse:collapse;margin-top:8px;}
+.ph-visit-table th{background:var(--gold-pale);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--warm-gray);padding:8px 12px;text-align:left;font-weight:600;}
+.ph-visit-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top;}
+.ph-visit-table tr:last-child td{border-bottom:none;}
+.ph-injector-pill{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600;}
+.pill-anna{background:#EFF6FF;color:var(--blue);}
+.pill-drv{background:var(--gold-pale);color:#92400E;}
+.ph-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;}
+.ph-modal{background:#fff;border-radius:10px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:24px;}
+.ph-modal-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:16px;}
+.ph-modal-close{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:var(--warm-gray);}
+.ph-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.ph-form-row.single{grid-template-columns:1fr;}
+.ph-modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;}
+/* LEAD QUALIFIER */
+.lq-form{background:#fff;border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px;}
+.lq-service-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:10px;}
+.lq-service-chip{padding:9px 14px;border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;background:#fff;color:var(--navy);transition:all 0.12s;text-align:center;user-select:none;}
+.lq-service-chip.selected{background:var(--navy);color:#fff;border-color:var(--navy);}
+.lq-service-chip:hover:not(.selected){background:var(--gold-pale);border-color:var(--gold);}
+.lq-qualify-btn{width:100%;padding:14px;background:var(--navy);color:var(--gold);border:none;border-radius:6px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;margin-top:14px;transition:background 0.2s;}
+.lq-qualify-btn:hover{background:var(--navy-mid);}
+.lq-qualify-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.lq-result{background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px;}
+.lq-result-header{padding:14px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.lq-status-badge{padding:5px 14px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;}
+.status-book{background:#F0FDF4;color:#15803d;border:1px solid #86EFAC;}
+.status-consult{background:#EFF6FF;color:var(--blue);border:1px solid #93C5FD;}
+.status-flag{background:#FFFBEB;color:#B45309;border:1px solid #FCD34D;}
+.status-no{background:#FEF2F2;color:var(--red);border:1px solid #FCA5A5;}
+.status-info{background:#F5F3FF;color:var(--purple);border:1px solid #C4B5FD;}
+.lq-result-body{padding:18px 20px;}
+.lq-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--warm-gray);font-weight:600;margin-bottom:6px;margin-top:14px;}
+.lq-label:first-child{margin-top:0;}
+.lq-script{background:var(--navy);color:#fff;border-radius:6px;padding:14px 16px;font-size:13px;line-height:1.8;font-style:italic;}
+.lq-price-tag{display:inline-block;background:var(--gold-pale);color:#92400E;border:1px solid var(--gold-light);border-radius:4px;padding:6px 14px;font-size:14px;font-weight:600;}
+.lq-next-step{font-size:13px;font-weight:600;color:var(--navy);padding:10px 14px;background:var(--gold-pale);border-radius:4px;}
+.lq-flag-list{list-style:none;}
+.lq-flag-list li{font-size:12px;padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;}
+.lq-flag-list li:last-child{border-bottom:none;}
+.lq-flag-list li::before{content:"\2691";color:var(--amber);}
+.lq-member-pitch{font-size:13px;line-height:1.6;padding:10px 14px;background:#F5F3FF;border-radius:4px;border-left:3px solid var(--purple);}
+.lq-reset-btn{background:none;border:1px solid var(--border);border-radius:4px;padding:8px 18px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--warm-gray);}
+.lq-reset-btn:hover{background:var(--gold-pale);}
+.lq-notes-field{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--navy);outline:none;resize:vertical;min-height:60px;margin-top:4px;}
+.lq-notes-field:focus{border-color:var(--gold);}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-inner">
+    <div class="logo">DR. V AESTHETICS<span>STAFF PORTAL — CLINICAL TOOLS</span></div>
+    <div class="badge">CONFIDENTIAL · CLINICAL USE ONLY</div>
+  </div>
+</div>
+
+<div class="mode-bar">
+  <div class="mode-inner">
+    <button class="mode-btn active" onclick="switchMode('plan',this)">&#x2B21; Treatment Plan</button>
+    <button class="mode-btn" onclick="switchMode('skincare',this)">&#x25C8; Skincare Protocol</button>
+    <button class="mode-btn" onclick="switchMode('history',this)">&#x25C9; Patient History</button>
+    <button class="mode-btn" onclick="switchMode('qualify',this)">&#x2605; Lead Qualifier</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- MODE 1: FULL TREATMENT PLAN BUILDER                     -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="mode-plan" class="mode-panel visible">
+
+  <div class="step-bar">
+    <div class="pb-step active" id="pstep1">1 · Patient</div>
+    <div class="pb-step" id="pstep2">2 · Concerns</div>
+    <div class="pb-step" id="pstep3">3 · Plan</div>
+    <div class="pb-step" id="pstep4">4 · Documents</div>
+  </div>
+
+  <!-- STEP 1: PATIENT -->
+  <div id="psec-patient" class="pb-section visible">
+    <div class="section">
+      <div class="section-title">Patient Info</div>
+      <div class="section-sub">Fill in after assessment. All fields inform the plan output.</div>
+      <div class="row-grid">
+        <div class="form-group"><label>First Name</label><input id="p-fname" placeholder="First name"/></div>
+        <div class="form-group"><label>Age</label><input id="p-age" type="number" placeholder="Age" min="18" max="99"/></div>
+        <div class="form-group">
+          <label>Fitzpatrick Type</label>
+          <select id="p-fst">
+            <option value="">Select...</option>
+            <option value="FST I">I — Very fair, always burns</option>
+            <option value="FST II">II — Fair, usually burns</option>
+            <option value="FST III">III — Medium, sometimes burns</option>
+            <option value="FST IV">IV — Olive, rarely burns</option>
+            <option value="FST V">V — Brown, very rarely burns</option>
+            <option value="FST VI">VI — Dark, never burns</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Membership</label>
+          <select id="p-membership">
+            <option value="None">None</option>
+            <option value="Bank Your Botox">Bank Your Botox</option>
+            <option value="VIP Basic">VIP Basic</option>
+            <option value="VIP Glo">VIP Glo</option>
+            <option value="VIP Lift & Tighten">VIP Lift & Tighten</option>
+            <option value="Versa/Eyelight/Radiesse Unlimited">Versa/Eyelight/Radiesse Unlimited</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Current Skincare</label>
+          <select id="p-skincare">
+            <option value="None">Nothing current</option>
+            <option value="OTC only">OTC products only</option>
+            <option value="Partial ZO">Partial ZO (not compliant)</option>
+            <option value="Full ZO compliant">Full ZO — compliant</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Provider</label><input id="p-provider" placeholder="e.g. Dr. V, Anna"/></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="form-group"><label>Event / Timeline</label><input id="p-event" placeholder="e.g. Wedding in 4 months — leave blank if none"/></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Medical Flags</div>
+      <div class="chip-row" id="p-flags">
+        <div class="chip" onclick="this.classList.toggle('selected')">Melasma / PIH history</div>
+        <div class="chip" onclick="this.classList.toggle('selected')">Keloid tendency</div>
+        <div class="chip" onclick="this.classList.toggle('selected')">Autoimmune condition</div>
+        <div class="chip" onclick="this.classList.toggle('selected')">Recent isotretinoin</div>
+        <div class="chip" onclick="this.classList.toggle('selected')">Poor wound healing</div>
+        <div class="chip" onclick="this.classList.toggle('selected')">Active smoking</div>
+        <div class="chip" onclick="this.classList.toggle('selected')">Blood thinners</div>
+        <div class="chip" onclick="this.classList.toggle('selected')">None</div>
+      </div>
+    </div>
+    <div class="btn-row"><button class="pbtn pbtn-primary" onclick="planGoTo(2)">Next →</button></div>
+  </div>
+
+  <!-- STEP 2: CONCERNS -->
+  <div id="psec-concerns" class="pb-section">
+    <div class="section">
+      <div class="section-title">Chief Concern</div>
+      <div class="section-sub">Patient's own words</div>
+      <div class="form-group"><textarea id="p-chief" placeholder="e.g. I look tired and my skin is dull. I want my lips done and something for my neck."></textarea></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Clinical Assessment</div>
+      <div class="section-sub">Select all that apply from your full-face assessment</div>
+      <div class="check-grid" id="p-concerns">
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Upper face lines</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Brow heaviness</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Under-eye hollows</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Midface volume loss</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Nasolabial / marionette</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Thin / uneven lips</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Jawline / chin definition</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Neck laxity / bands</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Skin laxity / crepey</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Pigment / melasma</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Texture / pores</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Dullness / glow</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Prevention / aging well</span></div>
+        <div class="check-item" onclick="this.classList.toggle('selected')"><input type="checkbox" readonly/><span class="check-label">Hair loss</span></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Provider Notes</div>
+      <div class="form-group"><textarea id="p-notes" placeholder="Specific treatments requested, prior treatments, clinical observations..."></textarea></div>
+    </div>
+    <div class="btn-row">
+      <button class="pbtn" onclick="planGoTo(1)">← Back</button>
+      <button class="pbtn pbtn-primary" onclick="buildTreatmentPlan()">Build Plan ✦</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: PLAN OUTPUT -->
+  <div id="psec-plan" class="pb-section">
+    <div id="p-flagbox"></div>
+    <div id="p-logstatus"></div>
+    <div id="p-planout"></div>
+    <div class="btn-row">
+      <button class="pbtn" onclick="planGoTo(2)">← Back</button>
+      <button class="pbtn pbtn-primary" onclick="buildDocuments()">Generate Documents →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: DOCUMENTS -->
+  <div id="psec-docs" class="pb-section">
+    <div class="docs-tab-row">
+      <div class="docs-tab active" onclick="switchDocTab('patient-plan',this)">Patient Plan</div>
+      <div class="docs-tab" onclick="switchDocTab('soap-note',this)">SOAP Note</div>
+      <div class="docs-tab" onclick="switchDocTab('skincare-detail',this)">Skincare Detail</div>
+    </div>
+    <div id="doc-patient-plan" class="doc-panel visible">
+      <div class="plan-out-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <h3>Patient Treatment Plan</h3>
+          <button class="copy-btn" onclick="doCopy('doc-pp-body',this)">Copy for AR</button>
+        </div>
+        <div id="doc-pp-body" class="plan-body loading">Generating...</div>
+      </div>
+    </div>
+    <div id="doc-soap-note" class="doc-panel">
+      <div class="plan-out-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <h3>Injector SOAP Note</h3>
+          <button class="copy-btn" onclick="doCopy('doc-soap-body',this)">Copy for AR</button>
+        </div>
+        <div id="doc-soap-body" class="plan-body loading">Generating...</div>
+      </div>
+    </div>
+    <div id="doc-skincare-detail" class="doc-panel">
+      <div class="plan-out-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <h3>ZO Skincare Protocol</h3>
+          <button class="copy-btn" onclick="doCopy('doc-zo-body',this)">Copy for AR</button>
+        </div>
+        <div id="doc-zo-body" class="plan-body loading">Generating...</div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="pbtn" onclick="planGoTo(3)">← Back</button>
+      <button class="pbtn" onclick="resetPlan()">New Patient</button>
+    </div>
+  </div>
+
+</div><!-- end mode-plan -->
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- MODE 2: SKINCARE PROTOCOL BUILDER (existing app)        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="mode-skincare" class="mode-panel">
+
+  <div class="section">
+    <div class="section-title">Patient Evaluation</div>
+    <div class="section-sub">Fill in after assessment. All fields inform the protocol output.</div>
+    <div class="row-grid">
+      <div class="form-group"><label>Patient Name</label><input id="pt-name" placeholder="Jane Smith"/></div>
+      <div class="form-group"><label>Age</label><input id="pt-age" type="number" placeholder="42"/></div>
+      <div class="form-group">
+        <label>Fitzpatrick Type</label>
+        <select id="pt-fitz">
+          <option value="">Select...</option>
+          <option value="1">I — Very fair, always burns</option>
+          <option value="2">II — Fair, usually burns</option>
+          <option value="3">III — Medium, sometimes burns</option>
+          <option value="4">IV — Olive, rarely burns</option>
+          <option value="5">V — Brown, very rarely burns</option>
+          <option value="6">VI — Dark, never burns</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Skin Type</label>
+        <select id="pt-skintype">
+          <option value="">Select...</option>
+          <option value="dry">Dry / Normal-Dry</option>
+          <option value="normal">Normal / Balanced</option>
+          <option value="oily">Oily / Combination-Oily</option>
+          <option value="sensitized">Sensitized / Reactive</option>
+          <option value="postprocedure">Post-Procedure / Healing</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Primary Skin Concerns</div>
+    <div class="section-sub">Select all that apply. Protocol will follow ZO manual stacking rules.</div>
+    <div class="check-grid" id="concerns-grid">
+      <div class="check-item" data-val="aging_early" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Early Aging</span></div>
+      <div class="check-item" data-val="aging_moderate" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Moderate Aging</span></div>
+      <div class="check-item" data-val="aging_advanced" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Advanced Aging</span></div>
+      <div class="check-item" data-val="aging_severe" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Severe Aging / Photoaging</span></div>
+      <div class="check-item" data-val="pigment_mild" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Mild Pigmentation</span></div>
+      <div class="check-item" data-val="pigment_moderate" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Moderate Pigmentation</span></div>
+      <div class="check-item" data-val="pigment_severe" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Severe Pigmentation / Melasma</span></div>
+      <div class="check-item" data-val="pigment_resistant" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Resistant Melasma</span></div>
+      <div class="check-item" data-val="redness_mild" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Mild Redness / Rosacea</span></div>
+      <div class="check-item" data-val="redness_moderate" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Moderate Rosacea</span></div>
+      <div class="check-item" data-val="redness_severe" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Severe Rosacea</span></div>
+      <div class="check-item" data-val="acne_mild" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Mild Acne</span></div>
+      <div class="check-item" data-val="acne_moderate" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Moderate Acne</span></div>
+      <div class="check-item" data-val="acne_severe" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Severe Acne / Cystic</span></div>
+      <div class="check-item" data-val="oilpore" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Oiliness + Enlarged Pores</span></div>
+      <div class="check-item" data-val="laxity" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Skin Laxity / Sagging</span></div>
+      <div class="check-item" data-val="texture" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Rough Texture / Scarring</span></div>
+      <div class="check-item" data-val="sensitized" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Sensitized / Weak Skin</span></div>
+      <div class="check-item" data-val="preprocedure" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Pre-Procedure Conditioning</span></div>
+      <div class="check-item" data-val="postprocedure" onclick="toggleConcern(this)"><input type="checkbox" readonly/><span class="check-label">Post-Procedure Recovery</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Contraindications / Flags</div>
+    <div class="section-sub">Check all that apply — will modify protocol automatically.</div>
+    <div class="contra-grid" id="contra-grid">
+      <div class="contra-item" data-val="pregnant" onclick="toggleContra(this)"><input type="checkbox" readonly/> Pregnant or breastfeeding</div>
+      <div class="contra-item" data-val="isotretinoin" onclick="toggleContra(this)"><input type="checkbox" readonly/> Isotretinoin within 6 months</div>
+      <div class="contra-item" data-val="herpes" onclick="toggleContra(this)"><input type="checkbox" readonly/> History of herpes simplex</div>
+      <div class="contra-item" data-val="hq_limit" onclick="toggleContra(this)"><input type="checkbox" readonly/> On HQ &gt; 4 months already</div>
+      <div class="contra-item" data-val="sensitive" onclick="toggleContra(this)"><input type="checkbox" readonly/> Highly sensitive / reactive skin</div>
+      <div class="contra-item" data-val="notox" onclick="toggleContra(this)"><input type="checkbox" readonly/> No neuromodulators</div>
+      <div class="contra-item" data-val="nolaser" onclick="toggleContra(this)"><input type="checkbox" readonly/> No laser / energy devices</div>
+      <div class="contra-item" data-val="budget" onclick="toggleContra(this)"><input type="checkbox" readonly/> Budget-conscious patient</div>
+    </div>
+  </div>
+
+  <button class="gen-btn" onclick="generateSkincare()">⚡ Generate ZO Protocol + Patient Plan</button>
+
+  <!-- SKINCARE OUTPUT -->
+  <div id="skincare-output" class="output" style="margin-top:20px;">
+    <div id="warning-box" class="warning-box" style="display:none;">
+      <div class="warning-title">⚠️ Protocol Modifications Applied</div>
+      <div id="warning-text" class="warning-text"></div>
+    </div>
+    <div class="out-section">
+      <div class="out-header"><div class="out-title">ZO Skin Health Regimen</div><div id="protocol-label" class="out-badge badge-blue">Protocol</div></div>
+      <div class="out-body">
+        <p id="regimen-intro" style="font-size:13px;color:var(--warm-gray);margin-bottom:14px;line-height:1.6;"></p>
+        <div class="out-section" style="margin-bottom:0;border:none;padding:0;">
+          <table class="proto-table"><thead><tr><th>Step</th><th>Product</th><th>Schedule</th><th>Dose</th><th>Why (Physiology)</th></tr></thead><tbody id="regimen-table"></tbody></table>
+        </div>
+        <div id="layering-note" style="font-size:11px;color:var(--warm-gray);margin-top:12px;padding:10px;background:var(--gold-pale);border-radius:4px;line-height:1.6;"></div>
+      </div>
+    </div>
+    <div class="out-section">
+      <div class="out-header"><div class="out-title">Anticipated Reaction Timeline</div><div class="out-badge badge-gold">Per ZO Manual</div></div>
+      <div class="out-body"><div class="timeline" id="timeline"></div></div>
+    </div>
+    <div class="out-section">
+      <div class="out-header"><div class="out-title">Protocol Tweak Schedule</div><div class="out-badge badge-purple">When to Adjust</div></div>
+      <div class="out-body"><div class="timeline" id="tweak-schedule"></div></div>
+    </div>
+    <div class="out-section">
+      <div class="out-header"><div class="out-title">Recommended Modalities — Dr. V Aesthetics</div><div class="out-badge badge-blue">Your Clinic</div></div>
+      <div class="out-body"><p id="modality-intro" style="font-size:13px;color:var(--warm-gray);margin-bottom:14px;"></p><div class="mod-grid" id="mod-grid"></div></div>
+    </div>
+    <div class="out-section">
+      <div class="out-header"><div class="out-title">Best Membership for This Patient</div><div class="out-badge badge-gold">Financial Fit</div></div>
+      <div class="out-body" id="membership-body"></div>
+    </div>
+    <div class="out-section">
+      <div class="out-header"><div class="out-title">In-Room Upsell Script</div><div class="out-badge badge-green">Say This</div></div>
+      <div class="out-body" id="upsell-script"></div>
+    </div>
+    <div class="out-section">
+      <div class="out-header"><div class="out-title">What NOT To Do</div><div class="out-badge badge-red">Patient Instructions</div></div>
+      <div class="out-body"><ul class="dont-list" id="dont-list"></ul></div>
+    </div>
+    <div class="out-section">
+      <div class="out-header">
+        <div class="out-title">Patient Summary Text — Copy to AR</div>
+        <div style="display:flex;align-items:center;gap:10px;"><div class="out-badge badge-blue">Send via AR</div><button class="copy-btn" id="copy-pt-btn" onclick="copyPatientText()">Copy for AR</button></div>
+      </div>
+      <div class="out-body"><p style="font-size:12px;color:var(--warm-gray);margin-bottom:10px;">Copy this into Aesthetic Record and send to patient after consult.</p><textarea class="patient-text-box" id="patient-text"></textarea></div>
+    </div>
+  </div>
+
+</div><!-- end mode-skincare -->
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- MODE 3: PATIENT HISTORY                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="mode-history" class="mode-panel">
+  <div id="ph-view-list">
+    <div class="ph-topbar">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input class="ph-search" id="ph-search" placeholder="Search patients..." oninput="phRenderList()"/>
+        <button class="ph-action-btn ph-btn-primary" onclick="phShowAddPatient()">+ New Patient</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="ph-action-btn ph-btn-outline" onclick="phShowImport()">&#8593; Import AR CSV</button>
+        <a class="ph-action-btn ph-btn-gold" style="text-decoration:none;display:inline-block;" href="https://docs.google.com/spreadsheets/d/1NTCU_gK6ckVNbs64ZAnDH2HeK7TVzG-NDiDphG8TdRg" target="_blank">View Sheet &#8599;</a>
+      </div>
+    </div>
+    <div id="ph-list-body"></div>
+  </div>
+  <div id="ph-view-detail" style="display:none;">
+    <button class="ph-back" onclick="phShowList()">&#8592; All Patients</button>
+    <div id="ph-detail-body"></div>
+  </div>
+  <div id="ph-modal-patient" class="ph-modal-overlay" style="display:none;">
+    <div class="ph-modal">
+      <button class="ph-modal-close" onclick="document.getElementById('ph-modal-patient').style.display='none'">&#10005;</button>
+      <div class="ph-modal-title">New Patient</div>
+      <div class="ph-form-row">
+        <div class="form-group"><label>First Name</label><input id="phf-fname" placeholder="Jane"/></div>
+        <div class="form-group"><label>Last Name</label><input id="phf-lname" placeholder="Smith"/></div>
+      </div>
+      <div class="ph-form-row">
+        <div class="form-group"><label>Date of Birth</label><input id="phf-dob" type="date"/></div>
+        <div class="form-group"><label>Phone</label><input id="phf-phone" placeholder="850-555-0100"/></div>
+      </div>
+      <div class="ph-form-row single">
+        <div class="form-group"><label>Email</label><input id="phf-email" placeholder="jane@email.com"/></div>
+      </div>
+      <div class="ph-form-row single">
+        <div class="form-group"><label>Membership</label>
+          <select id="phf-membership">
+            <option value="None">None</option>
+            <option value="Bank Your Botox">Bank Your Botox</option>
+            <option value="VIP Basic">VIP Basic</option>
+            <option value="VIP Glo">VIP Glo</option>
+            <option value="VIP Lift &amp; Tighten">VIP Lift &amp; Tighten</option>
+            <option value="LHR Membership">LHR Membership</option>
+            <option value="Tattoo Removal Membership">Tattoo Removal Membership</option>
+          </select>
+        </div>
+      </div>
+      <div class="ph-form-row single">
+        <div class="form-group"><label>Notes</label><textarea id="phf-notes" placeholder="Allergies, flags, preferences..."></textarea></div>
+      </div>
+      <div class="ph-modal-btns">
+        <button class="ph-action-btn ph-btn-outline" onclick="document.getElementById('ph-modal-patient').style.display='none'">Cancel</button>
+        <button class="ph-action-btn ph-btn-primary" onclick="phSavePatient()">Save Patient</button>
+      </div>
+    </div>
+  </div>
+  <div id="ph-modal-visit" class="ph-modal-overlay" style="display:none;">
+    <div class="ph-modal">
+      <button class="ph-modal-close" onclick="document.getElementById('ph-modal-visit').style.display='none'">&#10005;</button>
+      <div class="ph-modal-title">Log Visit</div>
+      <div class="ph-form-row">
+        <div class="form-group"><label>Visit Date</label><input id="phv-date" type="date"/></div>
+        <div class="form-group"><label>Injector</label>
+          <select id="phv-injector">
+            <option value="Anna">Anna (NP)</option>
+            <option value="Dr. V">Dr. V</option>
+            <option value="Aesthetician">Aesthetician</option>
+          </select>
+        </div>
+      </div>
+      <div class="ph-form-row single">
+        <div class="form-group"><label>Treatments Done</label><input id="phv-treatments" placeholder="e.g. Forehead tox, lip filler 1 syringe"/></div>
+      </div>
+      <div class="ph-form-row single">
+        <div class="form-group"><label>Products Used / Retail Sold</label><input id="phv-products" placeholder="e.g. ZO Daily Power Defense"/></div>
+      </div>
+      <div class="ph-form-row">
+        <div class="form-group"><label>Total Charged ($)</label><input id="phv-total" type="number" placeholder="0"/></div>
+        <div class="form-group"><label>Payment Method</label>
+          <select id="phv-payment">
+            <option value="Card">Card</option>
+            <option value="Cash">Cash</option>
+            <option value="Cherry">Cherry Financing</option>
+            <option value="Membership">Membership</option>
+            <option value="Mixed">Mixed</option>
+          </select>
+        </div>
+      </div>
+      <div class="ph-form-row single">
+        <div class="form-group"><label>Notes</label><textarea id="phv-notes" placeholder="Clinical notes, reactions, follow-up plan..."></textarea></div>
+      </div>
+      <div class="ph-modal-btns">
+        <button class="ph-action-btn ph-btn-outline" onclick="document.getElementById('ph-modal-visit').style.display='none'">Cancel</button>
+        <button class="ph-action-btn ph-btn-primary" onclick="phSaveVisit()">Save Visit</button>
+      </div>
+    </div>
+  </div>
+  <div id="ph-modal-import" class="ph-modal-overlay" style="display:none;">
+    <div class="ph-modal">
+      <button class="ph-modal-close" onclick="document.getElementById('ph-modal-import').style.display='none'">&#10005;</button>
+      <div class="ph-modal-title">Import from Aesthetic Record</div>
+      <p style="font-size:13px;color:var(--warm-gray);margin-bottom:14px;line-height:1.6;">Export a patient report from AR as CSV. The app auto-detects columns. Duplicates (matched by phone) are skipped.</p>
+      <div class="form-group"><label>CSV File</label><input id="ph-csv-file" type="file" accept=".csv" onchange="phHandleCSV(this)"/></div>
+      <div id="ph-csv-preview" style="margin-top:14px;font-size:13px;"></div>
+      <div class="ph-modal-btns">
+        <button class="ph-action-btn ph-btn-outline" onclick="document.getElementById('ph-modal-import').style.display='none'">Cancel</button>
+        <button id="ph-csv-import-btn" class="ph-action-btn ph-btn-primary" onclick="phImportCSV()" style="display:none;">Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- MODE 4: LEAD QUALIFIER                                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="mode-qualify" class="mode-panel">
+  <div class="section" style="margin-bottom:14px;">
+    <div class="section-title">In-Room Lead Qualifier</div>
+    <div class="section-sub">Staff use only. Enter the lead's name and service interest &#8212; Zoe KB logic qualifies them instantly.</div>
+  </div>
+  <div class="lq-form">
+    <div class="row-grid" style="margin-bottom:14px;">
+      <div class="form-group"><label>Lead / Patient Name</label><input id="lq-name" placeholder="First name"/></div>
+      <div class="form-group"><label>Existing Patient?</label>
+        <select id="lq-existing">
+          <option value="no">New lead</option>
+          <option value="yes">Existing patient</option>
+          <option value="member">Active member</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px;"><label>Service Interest</label>
+      <div class="lq-service-grid" id="lq-service-grid">
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Neurotoxin / Tox</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Lip Filler</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Filler (other)</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Laser Hair Removal</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Tattoo Removal</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">IPL Photofacial</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">CO2 Laser</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Bloom &amp; Rise</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">P-Shot / O-Shot</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">IV Therapy</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Weight Loss</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Membership</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Geneo Facial</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Vampire Breast Lift</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">Microneedling</div>
+        <div class="lq-service-chip" onclick="lqToggleService(this)">RF Microneedling</div>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <label>Additional Context (optional)</label>
+      <textarea class="lq-notes-field" id="lq-context" placeholder="e.g. Has blonde hair, recently tanned, on blood thinners, history of cold sores, asks about pricing..."></textarea>
+    </div>
+    <button class="lq-qualify-btn" id="lq-btn" onclick="qualifyLead()">&#9733; Qualify Lead</button>
+  </div>
+  <div id="lq-result-area"></div>
+</div>
+
+</div><!-- end main -->
+
+<script>
+// ─── MODE SWITCHER ────────────────────────────────────────
+function switchMode(mode, el) {
+  document.querySelectorAll('.mode-panel').forEach(p => p.classList.remove('visible'));
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode-'+mode).classList.add('visible');
+  (el || event.target).classList.add('active');
+}
+
+// ─── PLAN BUILDER STATE ───────────────────────────────────
+let planText = '';
+const SHEET_ID = '1NTCU_gK6ckVNbs64ZAnDH2HeK7TVzG-NDiDphG8TdRg';
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/'+SHEET_ID;
+
+function planGoTo(step) {
+  ['patient','concerns','plan','docs'].forEach((s,i) => {
+    document.getElementById('psec-'+s).classList.toggle('visible', i+1===step);
+    document.getElementById('pstep'+(i+1)).className = 'pb-step'+(i+1===step?' active':i+1<step?' done':'');
+  });
+  window.scrollTo(0,0);
+}
+
+function getPlanData() {
+  return {
+    name: document.getElementById('p-fname').value || 'Patient',
+    age: document.getElementById('p-age').value || '—',
+    fst: document.getElementById('p-fst').value || '—',
+    membership: document.getElementById('p-membership').value,
+    skincare: document.getElementById('p-skincare').value,
+    provider: document.getElementById('p-provider').value || '—',
+    event: document.getElementById('p-event').value || 'None',
+    flags: [...document.querySelectorAll('#p-flags .chip.selected')].map(c=>c.textContent).join(', ') || 'None',
+    concerns: [...document.querySelectorAll('#p-concerns .check-item.selected .check-label')].map(c=>c.textContent).join(', ') || 'None',
+    chief: document.getElementById('p-chief').value || '—',
+    notes: document.getElementById('p-notes').value || '—'
+  };
+}
+
+async function buildTreatmentPlan() {
+  const p = getPlanData();
+  planGoTo(3);
+  document.getElementById('p-flagbox').innerHTML = '';
+  document.getElementById('p-logstatus').innerHTML = '';
+  document.getElementById('p-planout').innerHTML = `<div class="plan-out-card" style="display:flex;align-items:center;gap:10px;"><div class="spinner"></div><span style="font-size:13px;color:var(--warm-gray);">Building plan for ${p.name}...</span></div>`;
+
+  const sys = `You are the Dr. V Medical Aesthetics Treatment Plan Builder for Dr. Vaidehi Patel MD, Pensacola FL.
+
+PRICING:
+- Tox: Forehead+Glabella $600, Crow's feet $300, Lip flip $150, Masseter $960, Platysmal bands $425, Nefertiti $1200, Chin $150, DAOs $150
+- Filler: $1,500/syringe. Add 1 cushion syringe to ALL non-lip areas. Lips = face value only.
+- Biostimulators: 2-vial bundle $1,950 (first-time includes ZO kit), 4-vial $3,600
+- Sylfirm RFMN face $1,650 + neck add-on $200/session
+- Microneedling single $350, series of 3 $950
+- Geneo facial $275, series of 3 $750
+- CO2 laser $1,300 (needs 6-8wk preconditioning; high risk FST IV+ with melasma)
+- Lighten & Tighten (RFMN x3 + skincare kit + 1 free CO2) $3,800
+- ZO retail: DPD $190, GFS $200, W+T Repair $168, SPF $54, Pigment Control+HQ $240
+
+CLINICAL RULES:
+- Every plan: ZO skincare + tox as foundation
+- Sequence: foundation → structure/volume → refine/relax → maintain
+- Melasma: Start ZO Pigment Control+HQ day 1. 6-8wk compliance before any device. Sylfirm RFMN (melasma-safe). Monthly microneedling as maintenance post-series. IPL CONTRAINDICATED. CO2 high risk FST IV+ — route to Dr. V.
+- ZO active hold: stop retinol+HQ+exfoliating pads 5 days before AND after every microneedling or RFMN session.
+- Support midface BEFORE lips/folds. FST V-VI: avoid ablative CO2.
+
+OUTPUT FORMAT:
+## Clinical flags
+[serious flags only — omit section if none]
+
+## Phase 1 — Foundation (Weeks 0–4)
+[treatments, notes, prices]
+Phase 1 subtotal: $X
+
+## Phase 2 — Build (Months 2–4)
+[treatments]
+Phase 2 subtotal: $X
+
+## Phase 3 — Refine & maintain (Months 4–6+)
+[treatments]
+Phase 3 subtotal: $X
+
+## Investment
+Full plan total: $X
+Pay-in-full (10% off): $X
+Start today (Phase 1): $X
+
+## Consult script
+[2-3 sentences the provider says]
+
+## Top objections
+[2-3 objections with reframes]`;
+
+  const msg = `Patient: ${p.name}, ${p.age}yo, ${p.fst}
+Membership: ${p.membership} | Skincare: ${p.skincare}
+Flags: ${p.flags} | Concerns: ${p.concerns}
+Chief: ${p.chief} | Event: ${p.event}
+Notes: ${p.notes}
+Build the full phased plan.`;
+
+  try {
+    const res = await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:sys,messages:[{role:'user',content:msg}]})});
+    const data = await res.json();
+    planText = data.content?.[0]?.text || 'Error generating plan.';
+    const totals = extractTotals(planText);
+    const flagMatch = planText.match(/## Clinical flags\n([\s\S]*?)(?=##)/);
+    if (flagMatch && flagMatch[1].trim()) {
+      document.getElementById('p-flagbox').innerHTML = `<div class="warning-box"><div class="warning-title">⚠ Clinical Flags</div><div class="warning-text">${flagMatch[1].trim().replace(/\n/g,'<br>')}</div></div>`;
+    }
+    document.getElementById('p-planout').innerHTML = renderPlanSections(planText);
+    logPlanToSheet(p, totals);
+  } catch(e) {
+    document.getElementById('p-planout').innerHTML = `<div class="warning-box"><div class="warning-title">Connection Error</div><div class="warning-text">Could not reach AI. Please check connection and try again.</div></div>`;
+  }
+}
+
+function extractTotals(text) {
+  const p1 = text.match(/Phase 1 subtotal:\s*\$?([\d,]+)/i)?.[1];
+  const fp = text.match(/Full plan total:\s*\$?([\d,]+)/i)?.[1];
+  const pf = text.match(/Pay-in-full[^:]*:\s*\$?([\d,]+)/i)?.[1];
+  return { phase1: p1?'$'+p1:'—', fullPlan: fp?'$'+fp:'—', payInFull: pf?'$'+pf:'—' };
+}
+
+function renderPlanSections(text) {
+  const secs = text.split(/^## /m).filter(s=>s.trim()&&!s.startsWith('Clinical flags'));
+  const colors = {'1':'ph1','2':'ph2','3':'ph3'};
+  return secs.map(sec=>{
+    const lines = sec.trim().split('\n');
+    const title = lines[0];
+    const body = lines.slice(1).join('\n').trim();
+    const num = title.match(/Phase (\d)/)?.[1];
+    const pill = num ? `<span class="phase-pill ${colors[num]||'phmaint'}">Phase ${num}</span>` : '';
+    return `<div class="plan-out-card">${pill}<h3>${title.replace(/Phase \d — /,'')}</h3><div class="plan-body">${body.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}</div></div>`;
+  }).join('') || `<div class="plan-out-card"><div class="plan-body">${text}</div></div>`;
+}
+
+async function logPlanToSheet(p, totals) {
+  const date = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  const time = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('p-logstatus').innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;"><span class="log-pill">✓ Plan logged to sheet</span><a class="sheet-link" onclick="window.open('${SHEET_URL}')">View log →</a></div>`;
+}
+
+async function buildDocuments() {
+  planGoTo(4);
+  const p = getPlanData();
+  ['doc-pp-body','doc-soap-body','doc-zo-body'].forEach(id=>{
+    document.getElementById(id).textContent='Generating...';
+    document.getElementById(id).className='plan-body loading';
+  });
+
+  const [ppDoc, soapDoc, zoDoc] = await Promise.all([
+    callClaude(`Generate a patient-facing treatment plan for Dr. V Medical Aesthetics (Vaidehi Patel MD, Pensacola FL).
+Patient: ${p.name}, ${p.age}yo. Date: ${new Date().toLocaleDateString()}.
+Goals: ${p.chief}
+Plan: ${planText}
+Format: header, patient name/date, goals section, phased plan (Phase 1/2/3) with treatment+notes+investment columns, investment options (total / pay-in-full 10% off / phase 1 today), what to expect, next steps checkboxes, acknowledgement/signature line. Plain text only.`),
+    callClaude(`Generate a complete injector SOAP note for Dr. V Medical Aesthetics.
+Patient: ${p.name}, ${p.age}yo, ${p.fst}. Provider: ${p.provider}. Date: ${new Date().toLocaleDateString()}.
+Chief: ${p.chief}. Findings: ${p.concerns}. Flags: ${p.flags}. Skincare: ${p.skincare}.
+Plan: ${planText}
+Format: S/O/A/P sections, results & outcome, education & counseling checklist (include ZO active hold if microneedling/RFMN), consent & documentation checklist, follow-up. Blank fields for lot numbers, expiration, provider signature. Plain text only.`),
+    callClaude(`Generate a detailed ZO Skin Health regimen for this patient to take home.
+Patient: ${p.name}. Concerns: ${p.concerns}. Flags: ${p.flags}. FST: ${p.fst}.
+Include: recommended ZO program name, AM routine (product, dose, how to apply), PM routine, SPF reminder, reaction timeline (what to expect weeks 1-12), what NOT to do (retinol hold before procedures, no sun, etc), when to reorder.
+Format as a clear patient-friendly document. Plain text only.`)
+  ]);
+
+  ['doc-pp-body','doc-soap-body','doc-zo-body'].forEach((id,i)=>{
+    document.getElementById(id).textContent=[ppDoc,soapDoc,zoDoc][i];
+    document.getElementById(id).className='plan-body';
+  });
+}
+
+async function callClaude(prompt) {
+  try {
+    const res = await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const data = await res.json();
+    return data.content?.[0]?.text||'Error generating.';
+  } catch(e){ return 'Connection error. Please try again.'; }
+}
+
+function switchDocTab(tab, el) {
+  document.querySelectorAll('.doc-panel').forEach(p=>p.classList.remove('visible'));
+  document.querySelectorAll('.docs-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('doc-'+tab).classList.add('visible');
+  el.classList.add('active');
+}
+
+function doCopy(id, btn) {
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    btn.textContent='✓ Copied!'; btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='Copy for AR'; btn.classList.remove('copied'); },2000);
+  });
+}
+
+function resetPlan() {
+  ['p-fname','p-age','p-event','p-chief','p-notes','p-provider'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-fst').value='';
+  document.getElementById('p-membership').value='None';
+  document.getElementById('p-skincare').value='None';
+  document.querySelectorAll('#p-flags .chip.selected,#p-concerns .check-item.selected').forEach(el=>el.classList.remove('selected'));
+  planText=''; planGoTo(1);
+}
+
+// ─── SKINCARE PROTOCOL BUILDER (original logic) ──────────
+let selectedConcerns=[], selectedContras=[];
+function toggleConcern(el) {
+  el.classList.toggle('selected');
+  const v = el.dataset.val;
+  selectedConcerns = selectedConcerns.includes(v) ? selectedConcerns.filter(x=>x!==v) : [...selectedConcerns,v];
+}
+function toggleContra(el) {
+  el.classList.toggle('selected');
+  const v = el.dataset.val;
+  selectedContras = selectedContras.includes(v) ? selectedContras.filter(x=>x!==v) : [...selectedContras,v];
+}
+
+const PROTOCOLS = {
+  sensitized:{label:"Sensitized / Barrier Repair Protocol",intro:"Compromised barrier. Gentle non-irritating approach. Fragrance-free, sulfate-free. No retinoids until barrier restored (4–6 weeks).",steps:[{step:"GSR Step 1",product:"Gentle Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Fragrance-free, sulfate-free. Does not disrupt acid mantle. Essential first step in barrier repair."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"2–3x/week AM only",why:"Minimal exfoliation to remove surface debris without stressing compromised barrier."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:false,dose:"1 pad AM, avoid if reactive",why:"Low-level chemical exfoliation. Skip if skin is highly reactive."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:true,dose:"1–2 pumps AM+PM",why:"Barrier restoration with DNA repair enzymes. The most critical product for sensitized skin recovery."},{step:"Supplementary",product:"Renewal Crème (as needed)",am:false,pm:false,dose:"As needed for comfort",why:"Rich ceramide formula calms and supports barrier repair during peak reaction phase."}]},
+  postprocedure:{label:"Post-Procedure Recovery Protocol",intro:"Immediately post-laser/peel/procedure. Hydration + barrier repair only. No actives for 5–7 days minimum.",steps:[{step:"GSR Step 1",product:"Hydrating Cleanser",am:true,pm:true,dose:"Small amount, lukewarm water",why:"Ultra-gentle. No acids, no fragrance. Cleanses without disrupting healing epidermis."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:true,dose:"1–2 pumps AM+PM",why:"DNA repair enzymes accelerate epidermal recovery. Barrier restoration is priority #1 post-procedure."},{step:"Supplementary",product:"Renewal Crème",am:true,pm:true,dose:"Liberally as needed",why:"Occlusive barrier. Prevents TEWL during acute healing phase. Apply generously."},{step:"SPF",product:"Smart Tone SPF 50+",am:true,pm:false,dose:"Daily AM — non-negotiable",why:"Post-procedure skin is photosensitized. UV exposure will cause PIH immediately. SPF is mandatory."}]},
+  preprocedure:{label:"Pre-Procedure Skin Conditioning Protocol",intro:"Begin 4–6 weeks before procedure. Strengthens skin, normalizes KMC, reduces PIH risk post-procedure. Discontinue retinoids 5 days before procedure.",steps:[{step:"GSR Step 1",product:"Gentle Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Barrier-supportive cleansing baseline."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"2–3x/week AM",why:"Normalizes surface texture for even procedure penetration."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Chemical exfoliation conditioning. Well-conditioned stratum corneum = even energy penetration."},{step:"Prevent + Correct",product:"Illuminating AOX Serum",am:true,pm:false,dose:"1–2 pumps AM",why:"Antioxidant pre-loading reduces post-procedure PIH cascade."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Maximize barrier before procedure stress."},{step:"Prevent + Correct",product:"Retinol Skin Brightener 0.5%",am:false,pm:true,dose:"1 pump PM — STOP 5 days before procedure",why:"Retinol pre-conditioning primes skin. Stop 5 days before procedure date."}]},
+  aging_early:{label:"Early Aging — Anti-Aging Foundation Protocol",intro:"Fine lines, early loss of radiance, mild dullness. Retinol 0.25% introduction. Minimal anticipated reactions.",steps:[{step:"GSR Step 1",product:"Exfoliating Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Salicylic acid provides daily mild chemical exfoliation at cleansing step."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"Daily AM",why:"Physical exfoliation increases surface cell turnover rate for early anti-aging benefit."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Glycolic + salicylic acid chemical exfoliation platform. Accelerates KMC for anti-aging results."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Antioxidant protection + DNA repair enzymes. Foundation anti-aging product."},{step:"Prevent + Correct",product:"Retinol Skin Brightener 0.25%",am:false,pm:true,dose:"1 pump PM, apply last",why:"Entry-level retinol. Begins cellular turnover stimulation. Minimal reaction for early aging."}]},
+  aging_moderate:{label:"Moderate Aging — Anti-Aging Accelerated Protocol",intro:"Moderate lines, loss of firmness. Retinol 0.5%. Moderate anticipated reactions.",steps:[{step:"GSR Step 1",product:"Exfoliating Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"BHA cleanser daily."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"Daily AM",why:"Physical exfoliation preps for retinol penetration."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Ongoing chemical exfoliation."},{step:"Prevent + Correct",product:"Illuminating AOX Serum",am:true,pm:false,dose:"1–2 pumps AM",why:"AM Vitamin C, separate from PM retinol."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Antioxidant + barrier foundation."},{step:"Prevent + Correct",product:"Retinol Skin Brightener 0.5%",am:false,pm:true,dose:"1 pump PM, apply last",why:"0.5% retinol + bakuchiol for moderate aging. Stimulates collagen synthesis."}]},
+  aging_advanced:{label:"Advanced Aging — High-Potency Retinol Protocol",intro:"Deep lines, significant laxity, photoaging. Growth Factor Serum + 1% retinol. Strong anticipated reactions.",steps:[{step:"GSR Step 1",product:"Hydrating Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Hydrating cleanser — counteracts TEWL from high-potency retinol."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"Daily AM",why:"Daily exfoliation critical for retinol penetration."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Maintains optimal surface for maximum retinol penetration."},{step:"Prevent + Correct",product:"Illuminating AOX Serum",am:true,pm:false,dose:"1–2 pumps AM",why:"Separate Vitamin C AM from high-potency retinol PM."},{step:"Prevent + Correct",product:"Growth Factor Serum",am:true,pm:true,dose:"1 pump AM+PM",why:"ZCORE complex strengthens DEJ. Synergistic with retinol for structural repair."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Barrier support critical under high-potency retinol."},{step:"Prevent + Correct",product:"Radical Night Repair",am:false,pm:true,dose:"1 pump PM, apply last",why:"1% retinol in oleosome delivery. Maximum collagen stimulation and MMP reduction."}]},
+  aging_severe:{label:"Severe Aging / Complex A+ Protocol",intro:"Deep nasolabial folds, solar elastosis, sagging. Complex A+ (1.3% retinol + bakuchiol). Pulse therapy — maximum 5 months. Strong reactions.",steps:[{step:"GSR Step 1",product:"Hydrating Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Manage TEWL in severely aged skin."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"Daily AM",why:"Complex A+ requires clear surface for penetration."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Ongoing chemical exfoliation."},{step:"Prevent + Correct",product:"Illuminating AOX Serum",am:true,pm:false,dose:"1–2 pumps AM",why:"AM only — separate from Complex A+."},{step:"Prevent + Correct",product:"Firming Serum",am:true,pm:true,dose:"1 pump AM+PM",why:"ZCORE strengthens DEJ while Complex A+ stimulates deep dermal collagen."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Barrier support — high-potency retinol induces therapeutic inflammation."},{step:"Prevent + Correct",product:"Complex A+",am:false,pm:true,dose:"4 pumps PM, apply last",why:"1.3% retinol + bakuchiol. Maximum stimulation. Pulse therapy — max 5 months then switch to W+T Repair."},{step:"Supplementary",product:"Recovery Crème (as needed)",am:false,pm:false,dose:"As needed",why:"Comfort during strong reactions. Does not interfere with efficacy."}]},
+  pigment_mild:{label:"Mild Dyspigmentation — Non-HQ Protocol",intro:"Isolated spots, prevention. Brightalive + Vitamin C. No HQ needed. Minimal reactions.",steps:[{step:"GSR Step 1",product:"Gentle Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Maintain barrier before brightening agents."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"2–3x/week AM",why:"Physical exfoliation removes surface pigment-laden corneocytes."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Glycolic acid accelerates pigmented keratinocyte removal."},{step:"Prevent + Correct",product:"Illuminating AOX Serum",am:true,pm:false,dose:"1–2 pumps AM",why:"Vitamin C inhibits melanin formation via tyrosinase inhibition."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Antioxidant defense against UV-triggered pigmentation."},{step:"Prevent + Correct",product:"Brightalive Skin Brightener",am:true,pm:true,dose:"1 pump AM+PM",why:"Multi-modal brightening — tranexamic acid + niacinamide + papain. Safe long-term."}]},
+  pigment_moderate:{label:"Moderate Dyspigmentation — Non-HQ Protocol",intro:"Multiple spots/patches. Added retinol accelerates pigment purging. Long-term safe. Moderate reactions.",steps:[{step:"GSR Step 1",product:"Gentle Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Barrier maintenance."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"2–3x/week AM",why:"Pigment-loaded corneocyte removal."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Glycolic for pigment cluster breakdown."},{step:"Prevent + Correct",product:"Illuminating AOX Serum",am:true,pm:false,dose:"1–2 pumps AM",why:"UV prevention and melanogenesis inhibition."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Antioxidant foundation."},{step:"Prevent + Correct",product:"Brightalive Skin Brightener",am:true,pm:true,dose:"1 pump AM+PM",why:"Multi-modal brightening synergistic with retinol."},{step:"Prevent + Correct",product:"Retinol Skin Brightener 0.5%",am:false,pm:true,dose:"1 pump PM, apply last",why:"Retinol accelerates turnover, pushing pigment to surface. Start 0.5%, increase to 1% as tolerated."}]},
+  pigment_severe:{label:"Severe Dyspigmentation — HQ Bleach + Blend Protocol",intro:"Melasma, PIH. HQ 4% bleaches and blends. Max 5-month course then transition. REQUIRES SPF daily. Strong reactions.",steps:[{step:"GSR Step 1",product:"Gentle Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"HQ + retinol combo creates strong reactions — barrier support is foundational."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"2–3x/week AM",why:"Exfoliation for HQ penetration."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Glycolic enhances HQ penetration — critical synergy."},{step:"Prevent + Correct",product:"Illuminating AOX Serum",am:true,pm:false,dose:"1–2 pumps AM",why:"UV critical — melanocytes are hyperactive. Secondary melanogenesis inhibition."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Prevent PIH rebound."},{step:"Prevent + Correct",product:"Pigment Control Crème 4% HQ",am:true,pm:true,dose:"2 pumps AM+PM",why:"HQ 4% inhibits tyrosinase. 5-month maximum."},{step:"Prevent + Correct",product:"Pigment Control + Blending Crème 4% HQ",am:false,pm:true,dose:"1 pump PM, mix with retinoid",why:"Bleaching + blending combined. Mix with W+T Repair or retinoid. Apply last PM."}]},
+  pigment_resistant:{label:"Resistant Melasma — Maximum HQ Protocol",intro:"Stubborn melasma unresponsive to standard HQ. Maximum bleach + blend with Complex A+. Pulse therapy. Close monitoring.",steps:[{step:"GSR Step 1",product:"Gentle Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Maximum gentleness — most aggressive protocol."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"2–3x/week AM",why:"HQ penetration to melanocyte layer."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Continuous glycolic for HQ pathway."},{step:"Prevent + Correct",product:"Illuminating AOX Serum",am:true,pm:false,dose:"1–2 pumps AM",why:"UV is the primary melasma trigger — max antioxidant defense."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Barrier — prevents paradoxical PIH."},{step:"Prevent + Correct",product:"Pigment Control Crème 4% HQ",am:true,pm:true,dose:"2 pumps AM+PM",why:"Maximum HQ bleaching."},{step:"Prevent + Correct",product:"Pigment Control + Blending Crème + Tretinoin or Complex A+",am:false,pm:true,dose:"1 pump + retinoid, mix and apply last",why:"Triple action: HQ blocks synthesis + retinoid forces turnover + blending redistributes melanin."}]},
+  redness_mild:{label:"Mild Redness / Rosacea Protocol",intro:"Intermittent flushing, mild erythema. Normalize with Rozatrol. Minimal reactions.",steps:[{step:"GSR Step 1",product:"Gentle Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Sulfate-free reduces vascular reactivity."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"2–3x/week AM",why:"Mild exfoliation — reduces sebum without triggering flares."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Salicylic + botanicals for anti-redness."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:true,dose:"1–2 pumps AM+PM",why:"ZO-RRS2 edelweiss anti-inflammatory complex."},{step:"Prevent + Correct",product:"Rozatrol",am:true,pm:true,dose:"1–2 pumps AM+PM",why:"Palmitoyl glycine + farnesol. Targets all 5 rosacea symptoms."}]},
+  redness_moderate:{label:"Moderate Rosacea Protocol",intro:"Persistent redness, telangiectasias. Adding Exfoliation Accelerator. Mild to moderate reactions.",steps:[{step:"GSR Step 1",product:"Gentle Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Rosacea barrier is compromised."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"2–3x/week AM",why:"Reduces hyperkeratotic buildup."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Sebum control and anti-inflammatory."},{step:"Prevent + Correct",product:"Exfoliation Accelerator",am:true,pm:false,dose:"2 pumps AM",why:"Glycolic increases turnover without retinol irritation."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:true,dose:"1–2 pumps AM+PM",why:"Meristem cell anti-inflammatory."},{step:"Prevent + Correct",product:"Rozatrol",am:true,pm:true,dose:"1–2 pumps AM+PM, last",why:"Full multiplex rosacea treatment."}]},
+  redness_severe:{label:"Severe Rosacea Protocol",intro:"Fixed redness, multiple telangiectasias. Pulse retinol therapy. Strong reactions.",steps:[{step:"GSR Step 1",product:"Gentle Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"Maximum gentleness — barrier severely compromised."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"2x/week, increase slowly",why:"Begin cautiously."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Chemical exfoliation for thick rosacea skin."},{step:"Prevent + Correct",product:"Exfoliation Accelerator",am:true,pm:false,dose:"2 pumps AM",why:"Glycolic for epidermal renewal."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:true,dose:"1–2 pumps AM+PM",why:"Anti-inflammatory foundation."},{step:"Prevent + Correct",product:"Rozatrol",am:true,pm:true,dose:"1–2 pumps AM+PM",why:"Core rosacea treatment."},{step:"Prevent + Correct",product:"Wrinkle + Texture Repair (pulse)",am:false,pm:true,dose:"1 pump PM after Rozatrol, 2–3x/week",why:"Retinol addresses textural damage. Start slow, increase as tolerated."}]},
+  acne_mild:{label:"Mild Acne Protocol",intro:"Early comedones, occasional breakouts. Minimal reactions.",steps:[{step:"GSR Step 1",product:"Exfoliating Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"BHA degreases skin and decongests pores."},{step:"GSR Step 2",product:"Dual Action Scrub",am:true,pm:false,dose:"Daily AM",why:"Physical + chemical — removes dead cells and sebum."},{step:"GSR Step 3",product:"Oil Control Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"2% salicylic decongests pores."},{step:"Prevent + Correct",product:"Complexion Clarifying Serum",am:true,pm:true,dose:"1 pump AM+PM",why:"ZSEB3 sebum control complex."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Antioxidant without adding oil."}]},
+  acne_moderate:{label:"Moderate Acne Protocol",intro:"Multiple comedones, papules, pustules. Alternating BPO/glycolic monthly. Moderate reactions.",steps:[{step:"GSR Step 1",product:"Exfoliating Cleanser",am:true,pm:true,dose:"Small amount, damp skin",why:"BHA reduces C. acnes bacteria."},{step:"GSR Step 2",product:"Dual Action Scrub",am:true,pm:false,dose:"Daily AM",why:"Physical + chemical exfoliation."},{step:"GSR Step 3",product:"Oil Control Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Salicylic inside follicle — direct comedolytic."},{step:"Prevent + Correct",product:"Complexion Clarifying Serum",am:true,pm:true,dose:"1 pump AM+PM",why:"Core sebum control."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Anti-inflammatory."},{step:"Prevent + Correct",product:"Exfoliation Accelerator or Acne Control (alternate monthly)",am:false,pm:true,dose:"2 pumps PM",why:"Month 1: glycolic renewal. Month 2: 10% BPO. Alternating prevents resistance."},{step:"Supplementary 2–3x/week",product:"Complexion Clearing Masque",am:false,pm:true,dose:"Thin layer 10–15 min, 2–3x/week",why:"10% sulfur targets active blemishes. Clay absorbs oil."}]},
+  acne_severe:{label:"Severe / Cystic Acne Protocol",intro:"Cystic nodular acne. Maximum multi-modal approach. Strong reactions. Route to Dr. V for isotretinoin consideration.",steps:[{step:"GSR Step 1",product:"Exfoliating Cleanser",am:true,pm:true,dose:"Small amount",why:"BHA foundation."},{step:"GSR Step 2",product:"Dual Action Scrub",am:true,pm:false,dose:"Daily AM",why:"Surface clearance."},{step:"GSR Step 3",product:"Oil Control Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Continuous pore decongestion."},{step:"Prevent + Correct",product:"Complexion Clarifying Serum",am:true,pm:true,dose:"1 pump AM+PM",why:"Sebum regulation."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Barrier + anti-inflammatory."},{step:"Prevent + Correct",product:"Acne Control (10% BPO)",am:false,pm:true,dose:"2 pumps PM",why:"Maximum bacteria reduction."},{step:"Supplementary 3x/week",product:"Complexion Clearing Masque",am:false,pm:true,dose:"Thin layer 20–30 min, 3x/week",why:"Active blemish treatment."}]},
+  oilpore:{label:"Oil + Pore Control Protocol",intro:"Excess oiliness, enlarged pores. Minimal reactions.",steps:[{step:"GSR Step 1",product:"Exfoliating Cleanser",am:true,pm:true,dose:"Small amount",why:"BHA degreases."},{step:"GSR Step 2",product:"Dual Action Scrub",am:true,pm:false,dose:"Daily AM",why:"Sebum-dead cell removal."},{step:"GSR Step 3",product:"Oil Control Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Pore decongestion."},{step:"Prevent + Correct",product:"Complexion Clarifying Serum",am:true,pm:true,dose:"1 pump AM+PM",why:"ZSEB3 sebum reduction."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1 pump AM",why:"Lightweight barrier."},{step:"Prevent + Correct",product:"Instant Pore Refiner",am:true,pm:true,dose:"2 pumps AM+PM",why:"Pore depth reduction. Dual-action immediate + long-term."}]},
+  laxity:{label:"Skin Laxity / Sagging Protocol",intro:"Laxity, loss of firmness. Growth Factor Serum + Firming Serum. Combine with biostimulator modalities for best results.",steps:[{step:"GSR Step 1",product:"Hydrating Cleanser",am:true,pm:true,dose:"Small amount",why:"Hydrating to compensate TEWL in lax skin."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"Daily AM",why:"Exfoliation for product penetration."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Chemical exfoliation platform."},{step:"Prevent + Correct",product:"Growth Factor Serum",am:true,pm:true,dose:"1 pump AM+PM",why:"ZCORE complex strengthens DEJ structural integrity. Critical for laxity."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Barrier + antioxidant."},{step:"Prevent + Correct",product:"Radical Night Repair",am:false,pm:true,dose:"1 pump PM last",why:"1% retinol stimulates collagen for dermal density improvement."}]},
+  texture:{label:"Texture / Scarring Protocol",intro:"Rough texture, acne scarring, enlarged pores. Exfoliation Accelerator + retinol. Combine with microneedling series.",steps:[{step:"GSR Step 1",product:"Exfoliating Cleanser",am:true,pm:true,dose:"Small amount",why:"BHA base."},{step:"GSR Step 2",product:"Exfoliating Polish",am:true,pm:false,dose:"Daily AM",why:"Physical exfoliation for texture smoothing."},{step:"GSR Step 3",product:"Complexion Renewal Pads",am:true,pm:true,dose:"1 pad AM+PM",why:"Chemical exfoliation to break down surface irregularities."},{step:"Prevent + Correct",product:"Exfoliation Accelerator",am:true,pm:false,dose:"2 pumps AM",why:"Glycolic acid KMC rate increase for surface smoothing."},{step:"Prevent + Correct",product:"Daily Power Defense",am:true,pm:false,dose:"1–2 pumps AM",why:"Antioxidant barrier."},{step:"Prevent + Correct",product:"Wrinkle + Texture Repair",am:false,pm:true,dose:"1 pump PM last",why:"Retinol for deep texture improvement and collagen stimulation."}]}
+};
+
+const MODALITIES = {
+  rfmn:{name:"Sylfirm RF Microneedling",price:"$1,650/session or $3,800 Lighten & Tighten package",concerns:["aging_advanced","aging_severe","laxity","redness_severe","texture","pigment_severe","pigment_resistant"],why:"RF energy + microneedling channels remodel collagen at dermal level. Sylfirm is melasma-safe. Addresses laxity, texture, redness/vascular, and pigment simultaneously.",timing:"Series of 3, spaced 4–6 weeks. 5-day ZO active hold before and after each session.",sessions:"3 sessions for optimal results. Annual maintenance.",membership:"VIP Lift & Tighten includes monthly RFMN"},
+  microneedling:{name:"Microneedling (with PRP or Exosomes)",price:"$350/session or $950 series of 3",concerns:["aging_early","aging_moderate","texture","acne_mild","acne_moderate","oilpore","preprocedure"],why:"Collagen induction therapy via micro-channels. PRP or exosomes amplify growth factor response. Excellent for texture, pores, fine lines. Monthly maintenance post-RFMN series for melasma.",timing:"Series of 3–4 for initial improvement. Monthly for maintenance. 5-day ZO active hold before and after.",sessions:"Initial series then monthly maintenance.",membership:"VIP Basic includes monthly microneedling"},
+  geneo:{name:"Geneo Glo2 Oxygen Facial",price:"$275/session or $750 series of 3",concerns:["aging_early","pigment_mild","redness_mild","sensitized","oilpore"],why:"OxyGeneo: CO2 bubble oxygenation + exfoliation via Bohr Effect. Safe, no downtime, no thermal risk. Excellent for maintenance between devices or as entry treatment.",timing:"Monthly maintenance. ZO regimen continues — no interruption.",sessions:"Monthly. Series of 3 for initial glow.",membership:"VIP Glo includes monthly Geneo facial"},
+  sculptra_radiesse:{name:"Sculptra / HD Radiesse (Biostimulator)",price:"$1,950 for 2-vial bundle (first bundle includes ZO kit)",concerns:["aging_advanced","aging_severe","laxity","texture"],why:"PLLA (Sculptra) or CaHA (HD Radiesse) triggers collagen neogenesis over 3–6 months. Addresses volume loss and skin quality simultaneously. Foundation of aging-well plans.",timing:"Series of 2–4 sessions. Best result 4–6 months after final vial. Biostimulator injected 2–4 weeks after PDO threads.",sessions:"2–4 vials per series depending on volume loss.",membership:"Biostimulators membership $100/mo ($650/vial)"},
+  co2_laser:{name:"CO2 Ablative Laser (Rohrer Phoenix)",price:"$1,300 (includes ZO Pigment Control + HQ prep kit)",concerns:["aging_advanced","aging_severe","texture","pigment_moderate","preprocedure"],why:"Ablative fractional CO2 resurfacing. Deep collagen remodeling. Requires 6–8 week ZO preconditioning. High PIH risk FST IV+.",timing:"Single session with 6–8 week ZO precondition. 5–7 days downtime. Avoid active melasma.",sessions:"1 session with maintenance as needed. VIP Glo includes 50% off.",membership:"VIP Glo: 50% off CO2 laser"},
+  light_peel:{name:"Chemical Peel (Light / 3-Step)",price:"From $150/session",concerns:["aging_early","aging_moderate","pigment_mild","redness_mild","acne_mild","oilpore"],why:"AHA/BHA chemical exfoliation. Removes dead surface cells, accelerates renewal, enhances ZO product penetration. Monthly adjunct to ZO program.",timing:"Monthly. Stop retinol 5 days before.",sessions:"Monthly maintenance.",membership:"VIP Basic / VIP Glo includes free monthly peels"}
+};
+
+function getMembershipRecommendation(concerns, contras, modalities) {
+  const hasSevereAging = concerns.some(c=>c.includes('aging_advanced')||c.includes('aging_severe')||c.includes('laxity'));
+  const hasRFMN = modalities.includes('rfmn');
+  const hasBiostim = modalities.includes('sculptra_radiesse');
+  const hasPigment = concerns.some(c=>c.includes('pigment'));
+  const isBudget = contras.includes('budget');
+  if (hasRFMN && hasSevereAging) return {name:"VIP Lift & Tighten — $650/mo",why:"This patient needs RFMN as primary modality. VIP Lift & Tighten includes monthly Sylfirm RFMN, 15% off all ZO skincare, and $11/unit neuromodulators.",savings:[{val:"Monthly RFMN",label:"Included"},{val:"15% off",label:"ZO Skincare"},{val:"$11/unit",label:"Neuromodulators"},{val:"$549/syr",label:"Filler rate"}],script:'"Based on what I\'m seeing with your laxity and aging changes, RF Microneedling is your best investment. Our VIP Lift & Tighten at $650/month includes monthly RFMN, 15% off your ZO products, and preferred pricing on everything else. Over 6 months you\'ll save significantly versus pay-as-you-go — and you\'re getting continuous treatment."'};
+  if (hasBiostim) return {name:"Biostimulators Membership — $100/mo",why:"Patient needs Sculptra or HD Radiesse series. Membership gives $650/vial pricing (max 2/mo) and 10% off skincare.",savings:[{val:"$650/vial",label:"Sculptra/Radiesse"},{val:"10% off",label:"All Retail"},{val:"Included",label:"ZO Skincare Kit (1st bundle)"}],script:'"The Biostimulators membership at $100/month gives you $650/vial on Sculptra or Radiesse — a significant saving on your series — plus 10% off all your ZO products. It practically pays for itself on the first session."'};
+  if (!isBudget && (hasPigment) && modalities.length>0) return {name:"VIP Glo — $250/mo",why:"Complex pigment management requiring ongoing monitoring. VIP Glo includes monthly facial/peel/microneedling, 20% off RFMN and biostimulators, and 50% off CO2 laser.",savings:[{val:"1 free/mo",label:"Facial/MN/Peel"},{val:"20% off",label:"RFMN & Sculptra"},{val:"50% off",label:"CO2 Laser"},{val:"15% off",label:"ZO Products"}],script:'"Given the complexity of your pigment concern, I\'d love you on VIP Glo. At $250/month you get a free monthly treatment, 20% off your RF microneedling, and 50% off CO2 when you\'re ready — plus 15% off all your ZO refills."'};
+  return {name:"VIP Basic — $195/mo",why:"Solid foundation for any skincare patient. 15% off ZO products pays for membership on moderate purchases. Monthly treatments enhance ZO results.",savings:[{val:"15% off",label:"ZO Skincare"},{val:"1 free/mo",label:"Facial/MN/Peel"},{val:"$11/unit",label:"Xeomin/Dysport"},{val:"15% off",label:"RFMN & Sculptra"}],script:'"Our VIP Basic at $195/month gives you 15% off all your ZO products — so refills become more affordable — plus a free monthly treatment that\'s going to amplify your skincare results. Most patients find it pays for itself pretty quickly."'};
+}
+
+function generateSkincare() {
+  const name = document.getElementById('pt-name').value||'Patient';
+  const age = document.getElementById('pt-age').value;
+  const fitz = parseInt(document.getElementById('pt-fitz').value)||0;
+  if (selectedConcerns.length===0){alert('Please select at least one skin concern.');return;}
+  let warnings=[];
+  if(selectedContras.includes('pregnant')) warnings.push('PREGNANT/BREASTFEEDING: No retinoids, no HQ, no chemical peels, no laser. GSR only with gentle hydration.');
+  if(selectedContras.includes('isotretinoin')) warnings.push('ISOTRETINOIN within 6 months: No ablative procedures. Retinol only after 6-month clearance.');
+  if(selectedContras.includes('herpes')) warnings.push('HERPES HISTORY: Antiviral prophylaxis required before any peel, laser, or microneedling.');
+  if(selectedContras.includes('hq_limit')) warnings.push('HQ LIMIT: Transition to Non-HQ maintenance protocol. No new HQ prescription.');
+  if(fitz>=5) warnings.push('FITZPATRICK V–VI: High PIH risk. HQ pre-conditioning mandatory before laser/peel. Avoid IPL. Careful retinol titration.');
+  const wb=document.getElementById('warning-box');
+  if(warnings.length>0){wb.style.display='block';document.getElementById('warning-text').innerHTML=warnings.map(w=>`• ${w}`).join('<br/>');}else{wb.style.display='none';}
+  let primaryProto='aging_early';
+  const prioOrder=['sensitized','postprocedure','preprocedure','pigment_resistant','pigment_severe','aging_severe','aging_advanced','redness_severe','acne_severe','pigment_moderate','aging_moderate','redness_moderate','acne_moderate','oilpore','pigment_mild','aging_early','redness_mild','acne_mild','laxity','texture'];
+  for(const p of prioOrder){if(selectedConcerns.includes(p)){primaryProto=p;break;}}
+  if(selectedContras.includes('pregnant')) primaryProto='sensitized';
+  if(selectedContras.includes('hq_limit')&&primaryProto.includes('pigment_severe')) primaryProto='pigment_moderate';
+  const proto=PROTOCOLS[primaryProto];
+  document.getElementById('protocol-label').textContent=proto.label;
+  document.getElementById('regimen-intro').textContent=proto.intro;
+  let extraSteps=[];
+  if(selectedConcerns.includes('oilpore')&&!primaryProto.includes('acne')&&!primaryProto.includes('oil')) extraSteps.push({step:"Add-On (Oil/Pore)",product:"Instant Pore Refiner",am:true,pm:true,dose:"2 pumps AM+PM",why:"Added for oil/pore concern."});
+  if(selectedConcerns.includes('laxity')&&!primaryProto.includes('severe')&&primaryProto!=='laxity') extraSteps.push({step:"Add-On (Laxity)",product:"Firming Serum",am:true,pm:true,dose:"1 pump AM+PM",why:"Added for laxity. ZCORE strengthens DEJ."});
+  if(selectedConcerns.includes('texture')&&!primaryProto.includes('aging_advanced')&&!primaryProto.includes('aging_severe')&&primaryProto!=='texture') extraSteps.push({step:"Add-On (Texture)",product:"Exfoliation Accelerator",am:true,pm:false,dose:"2 pumps AM",why:"Added for texture. Glycolic increases KMC rate."});
+  const allSteps=[...proto.steps,...extraSteps];
+  document.getElementById('regimen-table').innerHTML=allSteps.map(s=>`<tr><td style="font-size:11px;color:var(--warm-gray);font-weight:600;white-space:nowrap">${s.step}</td><td style="font-weight:600">${s.product}</td><td>${s.am?'<span class="am-pill">AM</span>':''}${s.pm?'<span class="pm-pill">PM</span>':''}</td><td style="font-size:12px">${s.dose}</td><td><div class="why-text">${s.why}</div></td></tr>`).join('');
+  document.getElementById('layering-note').innerHTML='⚡ <strong>Layering Rule:</strong> Apply thinnest to thickest. Growth Factor Serum, Radical Night Repair, Vitamin C Self-Activating, and Pigment Control + Blending Crème always go LAST due to high molecular weight. Vitamin C AM only. High-potency retinols PM only. <strong>ZO Active Hold:</strong> Stop retinol + HQ + exfoliating pads 5 days before AND after every microneedling or RFMN session.';
+  const isAgg=['aging_severe','aging_advanced','pigment_resistant','pigment_severe','redness_severe','acne_severe'].includes(primaryProto);
+  const isMod=['aging_moderate','pigment_moderate','redness_moderate','acne_moderate'].includes(primaryProto);
+  const tlData=[{weeks:"Weeks 1–2",phase:"Adjustment",content:`Minimal reaction as skin adjusts. Some mild dryness normal. <span class="tl-flag flag-normal">✓ Normal</span>`,action:"Stay the course."},{weeks:"Weeks 2–6",phase:"Peak Reaction",content:`${isAgg?'Strong':isMod?'Moderate':'Mild'} redness/dryness/flaking expected. <span class="tl-flag flag-watch">⚠ Monitor</span> This IS the repair process.`,action:"Adjust with less product or Renewal Crème if needed. Do NOT stop."},{weeks:"Week 6",phase:"First Assessment",content:`Schedule 6-week check-in. Texture improvement should begin. <span class="tl-flag flag-normal">✓ Assess</span>`,action:"Consider upgrading retinol if tolerating well."},{weeks:"Weeks 7–12",phase:"Improvement",content:`Reactions subside. Visible improvement. <span class="tl-flag flag-normal">✓ Progress</span>`,action:"Stay on protocol."},{weeks:"Week 12",phase:"Reassess",content:`Evaluate results. Consider upgrade or maintenance. <span class="tl-flag flag-normal">✓ Reassess</span>`,action:"Add modalities or transition to maintenance."},...(primaryProto.includes('pigment_severe')||primaryProto.includes('pigment_resistant')?[{weeks:"Month 5",phase:"HQ LIMIT",content:`⚠️ HYDROQUINONE MAXIMUM. Transition to Non-HQ maintenance. <span class="tl-flag flag-stop">🛑 Stop HQ</span>`,action:"Switch to Brightalive + Retinol Skin Brightener maintenance."}]:[])];
+  document.getElementById('timeline').innerHTML=tlData.map(t=>`<div class="tl-item"><div><div class="tl-week">${t.weeks}</div><div class="tl-phase">${t.phase}</div></div><div><div class="tl-content">${t.content}</div><div style="font-size:11px;color:var(--blue);margin-top:4px">→ ${t.action}</div></div></div>`).join('');
+  const tweaks=[{weeks:"Week 6",action:"Assess tolerance. If minimal reaction → upgrade retinol. If moderate → hold, add Renewal Crème."},{weeks:"Week 12",action:"Full review. Add Firming Serum, Exfoliation Accelerator, or additional brightening. Consider peel series."},{weeks:"5 days before any procedure",action:"STOP all ZO actives (retinol, HQ, exfoliating pads). Resume on day 6 post-procedure."},...(primaryProto.includes('pigment_severe')||primaryProto.includes('pigment_resistant')?[{weeks:"Month 4–5",action:"PREPARE HQ TRANSITION. Begin planning Non-HQ maintenance. Communicate to patient."}]:[]),{weeks:"If no improvement at 12 weeks",action:"FLAG FOR DR. V CONSULT. Reassess compliance, SPF use, hormonal factors."}];
+  document.getElementById('tweak-schedule').innerHTML=tweaks.map(t=>`<div class="tl-item"><div><div class="tl-week">${t.weeks}</div></div><div class="tl-content">${t.action}</div></div>`).join('');
+  const relevantMods=Object.entries(MODALITIES).filter(([key,mod])=>mod.concerns.some(c=>selectedConcerns.includes(c))&&!selectedContras.includes('nolaser')).map(([key])=>key);
+  document.getElementById('modality-intro').textContent=`Based on this patient's concerns, these Dr. V Aesthetics modalities will amplify ZO results. Present in order of impact.`;
+  document.getElementById('mod-grid').innerHTML=relevantMods.map(key=>{const m=MODALITIES[key];return`<div class="mod-card"><div class="mod-card-header"><div class="mod-card-title">${m.name}</div><div class="mod-card-price">${m.price.split(' or ')[0].split('(')[0].trim()}</div></div><div class="mod-card-body"><div class="mod-card-why">${m.why}</div><div class="mod-card-timing">⏱ ${m.timing}</div><div class="mod-card-timing" style="margin-top:4px">🔁 ${m.sessions}</div><div class="mod-card-membership">${m.membership}</div></div></div>`;}).join('');
+  const memRec=getMembershipRecommendation(selectedConcerns,selectedContras,relevantMods);
+  document.getElementById('membership-body').innerHTML=`<div class="mem-rec"><div class="mem-rec-title">${memRec.name}</div><div class="mem-rec-why">${memRec.why}</div><div class="mem-savings">${memRec.savings.map(s=>`<div class="mem-saving-item"><div class="mem-saving-val">${s.val}</div><div class="mem-saving-label">${s.label}</div></div>`).join('')}</div></div>`;
+  document.getElementById('upsell-script').innerHTML=`<div class="script-box">${memRec.script}<div class="script-note">💡 Present after explaining the protocol. Patient should understand WHY before the membership conversation.</div></div>${relevantMods.slice(0,2).map(key=>{const m=MODALITIES[key];return`<div class="script-box" style="margin-top:10px"><strong style="color:var(--gold-light)">${m.name}:</strong><br/>"I also want to talk about ${m.name}. ${m.why.split('.')[0].toLowerCase()}. Combining your ZO regimen with ${m.name.split(' ')[0]} gives results neither can achieve alone. ${m.sessions}."<div class="script-note">Timing: ${m.timing}</div></div>`;}).join('')}`;
+  const dontItems=["Stop all retinoids (retinol, Complex A+) 5 days before ANY procedure (laser, peel, microneedling, RFMN) — resume day 6 post-procedure","Stop AHAs/BHAs (Exfoliating Polish, Complexion Renewal Pads) 5 days before procedures","No sun exposure without SPF 50+ — especially critical on HQ or retinol","Do not mix Pigment Control Crème with any product — always apply directly to skin","Do not pick, peel, or scratch during reaction phase — causes PIH","Do not stop the protocol during reaction phase — reactions = skin is repairing (unless severe)","No waxing or threading on treated areas while on retinol","No NSAIDs (Advil, ibuprofen) 5–7 days before PRP, PRF, or microneedling",...(selectedContras.includes('herpes')?["HERPES HISTORY: Must take antiviral before any peel, laser, or microneedling — confirm with provider"]:[]),...(primaryProto.includes('pigment_severe')?["Do not exceed 5 months of hydroquinone — rebound hyperpigmentation risk"]:[]),...(fitz>=5?["Fitzpatrick V–VI: Avoid IPL. Extra caution with all energy devices — PIH risk elevated without preconditioning"]:[])];
+  document.getElementById('dont-list').innerHTML=dontItems.map(item=>`<li>${item}</li>`).join('');
+  const firstName=name.split(' ')[0];
+  const modText=relevantMods.slice(0,2).map(key=>`\n• ${MODALITIES[key].name} — ${MODALITIES[key].why.split('.')[0]}`).join('');
+  const timelineText=isAgg?"Weeks 2–6: You may experience redness, dryness, and peeling — this means it's working! Weeks 7–12: Reactions calm and results become visible. Week 12+: Skin at its best.":"Weeks 2–4: Mild dryness or flaking is normal. Weeks 5–8: Skin adjusts and improvement becomes visible. Week 12: Full results.";
+  document.getElementById('patient-text').value=`Hi ${firstName}! Thank you for your visit with Dr. V Aesthetics today. Here is your personalized skin health plan.\n\nYOUR ZO SKIN HEALTH PROGRAM: ${proto.label}\n\n${proto.intro}\n\nWHAT TO EXPECT:\n${timelineText}\n\nIMPORTANT — WHAT NOT TO DO:\n• Stop retinol and HQ products 5 days before any laser, peel, or microneedling — resume day 6 after\n• Always wear SPF 50+ — your skin is more sun-sensitive on this program\n• Do not pick or peel during the flaking phase — this causes dark spots\n• Do not stop the program when your skin reacts — reactions mean it's repairing\n${relevantMods.length>0?`\nRECOMMENDED TREATMENTS TO ENHANCE YOUR RESULTS:${modText}\n\nThese treatments work WITH your ZO program for results neither can achieve alone.`:''}\n\nYour next check-in: Week 6 for progress assessment.\n\nQuestions? Call us at 850-407-2803 or email antiaging@drvaesthetics.com\n\n— Dr. V Aesthetics Team, Pensacola FL`;
+  document.getElementById('skincare-output').classList.add('visible');
+  document.getElementById('skincare-output').scrollIntoView({behavior:'smooth'});
+}
+
+function copyPatientText(){
+  const ta=document.getElementById('patient-text');
+  navigator.clipboard.writeText(ta.value).then(()=>{
+    const btn=document.getElementById('copy-pt-btn');
+    btn.textContent='✓ Copied!';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy for AR';btn.classList.remove('copied');},2000);
+  });
+}
+
+// ─── PATIENT HISTORY ──────────────────────────────────────
+function phGetPatients(){try{return JSON.parse(localStorage.getItem('drv_patients')||'[]');}catch(e){return[];}}
+function phGetVisits(){try{return JSON.parse(localStorage.getItem('drv_visits')||'[]');}catch(e){return[];}}
+function phSavePatients(arr){localStorage.setItem('drv_patients',JSON.stringify(arr));}
+function phSaveVisits(arr){localStorage.setItem('drv_visits',JSON.stringify(arr));}
+function phUID(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+let phCurrentPatientId=null,phCSVRows=[];
+
+function phShowList(){document.getElementById('ph-view-list').style.display='';document.getElementById('ph-view-detail').style.display='none';phRenderList();}
+function phShowDetail(id){phCurrentPatientId=id;document.getElementById('ph-view-list').style.display='none';document.getElementById('ph-view-detail').style.display='';phRenderDetail(id);}
+
+function phRenderList(){
+  const q=(document.getElementById('ph-search').value||'').toLowerCase();
+  let patients=phGetPatients();
+  if(q)patients=patients.filter(p=>(p.fname+' '+p.lname+' '+(p.phone||'')).toLowerCase().includes(q));
+  patients.sort((a,b)=>(a.lname+a.fname).localeCompare(b.lname+b.fname));
+  const visits=phGetVisits();
+  const body=document.getElementById('ph-list-body');
+  if(!patients.length){body.innerHTML='<div class="ph-empty">No patients yet.<br>Add one or import from Aesthetic Record CSV.</div>';return;}
+  body.innerHTML=patients.map(p=>{
+    const vc=visits.filter(v=>v.patientId===p.id).length;
+    return '<div class="ph-patient-card" onclick="phShowDetail(\''+p.id+'\')"><div><div class="ph-patient-name">'+p.lname+', '+p.fname+'</div><div class="ph-patient-meta">'+(p.dob||'')+' &middot; '+(p.phone||'')+' &middot; '+(p.membership||'No membership')+'</div></div><div class="ph-visit-count">'+vc+' visit'+(vc!==1?'s':'')+'</div></div>';
+  }).join('');
+}
+
+function phRenderDetail(id){
+  const patients=phGetPatients();
+  const p=patients.find(x=>x.id===id);
+  if(!p)return;
+  const visits=phGetVisits().filter(v=>v.patientId===id).sort((a,b)=>b.visitDate.localeCompare(a.visitDate));
+  const injPill=function(i){return i==='Dr. V'?'<span class="ph-injector-pill pill-drv">Dr. V</span>':'<span class="ph-injector-pill pill-anna">'+i+'</span>';};
+  const rows=visits.map(function(v){return '<tr><td style="white-space:nowrap;font-weight:600;">'+v.visitDate+'</td><td>'+(v.treatments||'&mdash;')+'</td><td style="color:var(--warm-gray);font-size:12px;">'+(v.products||'&mdash;')+'</td><td>'+injPill(v.injector||'Anna')+'</td><td style="font-weight:600;white-space:nowrap;">$'+parseFloat(v.total||0).toLocaleString()+'</td><td style="font-size:12px;color:var(--warm-gray);">'+(v.notes||'&mdash;')+'</td></tr>';}).join('');
+  document.getElementById('ph-detail-body').innerHTML='<div class="section" style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;"><div><div class="section-title">'+p.fname+' '+p.lname+'</div><div class="section-sub" style="margin-bottom:0;">'+(p.dob?'DOB: '+p.dob+' &middot; ':'')+''+(p.phone||'')+' &middot; '+(p.email||'')+'</div>'+(p.membership&&p.membership!=='None'?'<span style="display:inline-block;margin-top:6px;padding:3px 10px;background:var(--gold-pale);color:#92400E;border-radius:3px;font-size:11px;font-weight:600;">'+p.membership+'</span>':'')+(p.notes?'<div style="margin-top:8px;font-size:12px;color:var(--warm-gray);">Notes: '+p.notes+'</div>':'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="ph-action-btn ph-btn-primary" onclick="phShowAddVisit()">+ Log Visit</button><button class="ph-action-btn ph-btn-outline" onclick="phDeletePatient(\''+p.id+'\')">Delete</button></div></div></div><div class="section"><div class="section-title">Visit History</div>'+(visits.length===0?'<div class="ph-empty" style="padding:24px 0;">No visits logged yet.</div>':'<table class="ph-visit-table"><thead><tr><th>Date</th><th>Treatments</th><th>Products</th><th>Injector</th><th>Total</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table>')+'</div>';
+}
+
+function phShowAddPatient(){document.getElementById('ph-modal-patient').style.display='flex';}
+function phShowAddVisit(){document.getElementById('phv-date').value=new Date().toISOString().split('T')[0];document.getElementById('ph-modal-visit').style.display='flex';}
+function phShowImport(){document.getElementById('ph-modal-import').style.display='flex';}
+
+function phSavePatient(){
+  const fname=document.getElementById('phf-fname').value.trim();
+  const lname=document.getElementById('phf-lname').value.trim();
+  if(!fname){alert('First name required.');return;}
+  const patients=phGetPatients();
+  const p={id:phUID(),fname:fname,lname:lname,dob:document.getElementById('phf-dob').value,phone:document.getElementById('phf-phone').value.trim(),email:document.getElementById('phf-email').value.trim(),membership:document.getElementById('phf-membership').value,notes:document.getElementById('phf-notes').value.trim(),createdAt:new Date().toISOString()};
+  patients.push(p);phSavePatients(patients);phSyncPatientToSheet(p);
+  document.getElementById('ph-modal-patient').style.display='none';
+  ['phf-fname','phf-lname','phf-dob','phf-phone','phf-email','phf-notes'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('phf-membership').value='None';
+  phRenderList();
+}
+
+function phSaveVisit(){
+  const treatments=document.getElementById('phv-treatments').value.trim();
+  if(!treatments){alert('Treatments required.');return;}
+  const visits=phGetVisits();
+  const v={id:phUID(),patientId:phCurrentPatientId,visitDate:document.getElementById('phv-date').value,treatments:treatments,products:document.getElementById('phv-products').value.trim(),injector:document.getElementById('phv-injector').value,total:document.getElementById('phv-total').value,payment:document.getElementById('phv-payment').value,notes:document.getElementById('phv-notes').value.trim(),createdAt:new Date().toISOString()};
+  visits.push(v);phSaveVisits(visits);phSyncVisitToSheet(v);
+  document.getElementById('ph-modal-visit').style.display='none';
+  ['phv-treatments','phv-products','phv-total','phv-notes'].forEach(function(id){document.getElementById(id).value='';});
+  phRenderDetail(phCurrentPatientId);
+}
+
+function phDeletePatient(id){
+  if(!confirm('Delete this patient and all their visits?'))return;
+  phSavePatients(phGetPatients().filter(function(p){return p.id!==id;}));
+  phSaveVisits(phGetVisits().filter(function(v){return v.patientId!==id;}));
+  phShowList();
+}
+
+async function phSyncPatientToSheet(p){try{await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'Patients',values:[[p.id,p.fname,p.lname,p.dob,p.phone,p.email,p.membership,p.notes,p.createdAt]]})});}catch(e){}}
+async function phSyncVisitToSheet(v){try{await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'Visits',values:[[v.id,v.patientId,v.visitDate,v.treatments,v.products,v.injector,v.total,v.payment,v.notes,v.createdAt]]})});}catch(e){}}
+
+function phHandleCSV(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const text=e.target.result;
+    const rows=text.split(/\r?\n/).filter(function(r){return r.trim();});
+    const headers=rows[0].split(',').map(function(h){return h.replace(/^"|"$/g,'').trim().toLowerCase();});
+    phCSVRows=rows.slice(1).map(function(row){
+      const cols=row.split(',').map(function(c){return c.replace(/^"|"$/g,'').trim();});
+      const obj={};headers.forEach(function(h,i){obj[h]=cols[i]||'';});return obj;
+    }).filter(function(r){return Object.values(r).some(function(v){return v;});});
+    document.getElementById('ph-csv-preview').innerHTML='<div style="color:var(--green);font-weight:600;">Found '+phCSVRows.length+' records. Columns: '+headers.join(', ')+'</div>';
+    document.getElementById('ph-csv-import-btn').style.display='';
+  };
+  reader.readAsText(file);
+}
+
+function phImportCSV(){
+  if(!phCSVRows.length)return;
+  const patients=phGetPatients();
+  const phones=new Set(patients.map(function(p){return p.phone.replace(/\D/g,'');}));
+  let added=0;
+  phCSVRows.forEach(function(row){
+    const phone=(row['phone']||row['mobile']||row['cell']||row['phone number']||'').replace(/\D/g,'');
+    if(phone&&phones.has(phone))return;
+    const fname=row['first name']||row['firstname']||row['first']||'';
+    const lname=row['last name']||row['lastname']||row['last']||'';
+    if(!fname&&!lname)return;
+    const p={id:phUID(),fname:fname,lname:lname,dob:row['dob']||row['date of birth']||row['birthdate']||'',phone:row['phone']||row['mobile']||row['cell']||'',email:row['email']||row['email address']||'',membership:'None',notes:'Imported from AR',createdAt:new Date().toISOString()};
+    patients.push(p);if(phone)phones.add(phone);added++;
+  });
+  phSavePatients(patients);
+  document.getElementById('ph-modal-import').style.display='none';
+  document.getElementById('ph-csv-preview').innerHTML='';
+  phCSVRows=[];alert('Imported '+added+' new patients.');
+  phRenderList();
+}
+
+// ─── LEAD QUALIFIER ───────────────────────────────────────
+let lqSelectedServices=[];
+function lqToggleService(el){
+  el.classList.toggle('selected');
+  lqSelectedServices=[].slice.call(document.querySelectorAll('#lq-service-grid .lq-service-chip.selected')).map(function(c){return c.textContent.trim();});
+}
+
+const LQ_SYSTEM='You are the in-room Lead Qualifier for Dr. V Medical Aesthetics (Pensacola FL). Staff enters a lead name, service interest, and any known context. You apply full practice knowledge to return a structured qualification decision.\n\nPRACTICE RULES:\n- Provider (Anna NP): Thu & Fri only, 11am-8pm. New aesthetic leads go here.\n- Dr. V (MD): Established patients only. Wellness/hormone. Bloom & Rise.\n- Consult: $100, credited toward same-day treatment.\n- $25 booking fee for non-members (auto-collected, credited same-day).\n- Booking portal: https://api.leadconnectorhq.com/widget/bookings/anna-crisco-personal-calendar-yuabbvabw\n\nNEUROTOXIN:\n- Brands: Dysport, Xeomin. NEVER say Botox.\n- By area (never per-unit to non-members): Forehead $600, Crow feet $300, Masseter $960 (sticker-shock qualify), Nefertiti $1200 (sticker-shock), Hyperhidrosis $1000 (sticker-shock), Lip flip $150, Bunny lines $100.\n- Bank Your Botox: $120/mo, 10 units at $12/unit.\n\nFILLER:\n- Brands: Restylane line. NEVER say Juvederm.\n- Lip filler starts ~$850. Other areas $850-$950.\n- LIP FILLER PRESCREENING (in-room): cold sore/HSV history (Valtrex needed); blood thinners (flag provider); 3 lip photos needed; prior filler history; chin/jaw goals = price higher.\n- Cushion rule: quote 1 extra syringe for all non-lip areas.\n- P-Shot: $1950 provider / $2100 Dr. V. O-Shot: $1300 provider / $1400 Dr. V.\n\nLASER HAIR REMOVAL:\n- Diode 810nm. Screen hair color first.\n- NOT A CANDIDATE: white, gray, red, blonde hair.\n- CANDIDATE: brown or black hair.\n- Sun/spray tan past 3-4 weeks = wait. Pregnant = wait. Accutane past 6 months = wait. PCOS = still works.\n- Pricing (3-session/8-session): Upper Lip $399/$975; Underarms/Bikini/Chin/Neck $475/$1150; Full Face $599/$1475; Lower Arms $675/$1650; Brazilian/Chest $945/$2295; Full Back/Full Legs $1075/$2625.\n\nTATTOO REMOVAL:\n- Q-Switch. No consult for XS/S/M/L. XL = consult.\n- Must be 12+ weeks old. Per session (black/color): XS $125/$150; S $175/$200; M $250/$300; L $375/$450.\n\nIPL:\n- NEVER say patient is a candidate or cleared. Provider makes final call.\n- GREEN: fair skin FST I-III, no recent sun, spots/redness concerns.\n- YELLOW: medium-tan skin, recent sun, melasma, photosensitizing meds, cold sore history, active acne.\n- RED: pregnant, active tan, on Accutane, open lesions, keloid history, lupus, changing mole.\n- Series (6 sessions + ZO kit): Full Face $2325; Face+Neck $3135; Face+Neck+Chest $3945. Maintenance: Full Face $175; Face+Neck $275.\n\nCO2 LASER: $1300 (ZO prep kit included). Sticker-shock qualify. 6-8 weeks ZO preconditioning.\n\nBLOOM & RISE:\n- Bloom (female): O-Shot + PRF + Xeomin = $2100. Provider and Dr. V.\n- Rise (male): P-Shot + PRF + Xeomin = $2500. Provider and Dr. V.\n- $100 consult, credited. NEVER say just an O-Shot.\n\nVAMPIRE BREAST LIFT: $1949 single / $3649 x2. Sticker-shock. NEVER say: adds volume, increases cup size.\n\nIV THERAPY: First visit $100 consult (credited). Myers $175, High-C $200, NAD+ $400-600, Hydration $125.\nVITAMIN INJECTIONS (no consult): B12 $35, Lipo-C $45, Glutathione IM $75, Vit D $40.\nWEIGHT LOSS: $100 consult credited. Semaglutide/Tirzepatide.\nHORMONE CONSULT: $350 NOT credited. Dr. V only. Prescreening required before booking.\nGENEO FACIAL: $275. No consult.\nMICRONEEDLING: $350/session or $950 series of 3.\nRF MICRONEEDLING (Sylfirm): $1650/session or $3800 Lighten & Tighten.\n\nSTICKER-SHOCK (required before quoting >$950): Frame it before the number.\nMEMBERSHIPS: LHR $50 activation, area locked. Tattoo $50 activation, 30-min $250/mo.\nPOST-TREATMENT URGENT (breathing trouble, severe swelling, vision changes, chest pain): ER immediately.\n\nReturn ONLY valid JSON, no markdown:\n{"status":"BOOK NOW|NEEDS CONSULT|FLAG FOR PROVIDER|NOT A CANDIDATE|GET MORE INFO","statusReason":"one sentence","script":"2-4 natural sentences staff says to lead","priceToQuote":"specific price or empty string","nextStep":"exact next action","flags":["array of flags or empty"],"membershipPitch":"brief pitch or empty string"}';
+
+async function qualifyLead(){
+  const name=document.getElementById('lq-name').value.trim()||'the lead';
+  const existing=document.getElementById('lq-existing').value;
+  const context=document.getElementById('lq-context').value.trim();
+  if(!lqSelectedServices.length){alert('Select at least one service.');return;}
+  const btn=document.getElementById('lq-btn');
+  btn.disabled=true;btn.textContent='...Qualifying';
+  document.getElementById('lq-result-area').innerHTML='<div style="padding:20px;text-align:center;"><div class="spinner"></div></div>';
+  const msg='Lead name: '+name+'\nPatient type: '+(existing==='yes'?'Existing patient':existing==='member'?'Active member':'New lead')+'\nService interest: '+lqSelectedServices.join(', ')+'\n'+(context?'Additional context: '+context:'')+'\nQualify this lead.';
+  try{
+    const res=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:LQ_SYSTEM,messages:[{role:'user',content:msg}]})});
+    const data=await res.json();
+    const text=data.content&&data.content[0]?data.content[0].text:'{}';
+    let result;
+    try{result=JSON.parse(text);}catch(e){result={status:'GET MORE INFO',statusReason:'Could not parse response.',script:text,priceToQuote:'',nextStep:'Review manually.',flags:[],membershipPitch:''};}
+    renderLQResult(name,result);saveLQToLog(name,lqSelectedServices,result);
+  }catch(e){
+    document.getElementById('lq-result-area').innerHTML='<div class="warning-box"><div class="warning-title">Connection Error</div><div class="warning-text">Could not reach AI. Check your connection.</div></div>';
+  }
+  btn.disabled=false;btn.textContent='\u2605 Qualify Lead';
+}
+
+function renderLQResult(name,r){
+  const statusMap={'BOOK NOW':'status-book','NEEDS CONSULT':'status-consult','FLAG FOR PROVIDER':'status-flag','NOT A CANDIDATE':'status-no','GET MORE INFO':'status-info'};
+  const statusClass=statusMap[r.status]||'status-info';
+  const flagsHtml=r.flags&&r.flags.length?'<div class="lq-label">Flags</div><ul class="lq-flag-list">'+r.flags.map(function(f){return '<li>'+f+'</li>';}).join('')+'</ul>':'';
+  const memberHtml=r.membershipPitch?'<div class="lq-label">Membership Opportunity</div><div class="lq-member-pitch">'+r.membershipPitch+'</div>':'';
+  document.getElementById('lq-result-area').innerHTML='<div class="lq-result"><div class="lq-result-header"><span class="lq-status-badge '+statusClass+'">'+r.status+'</span><span style="font-size:13px;color:var(--warm-gray);">'+name+' &middot; '+lqSelectedServices.join(', ')+'</span></div><div class="lq-result-body"><div class="lq-label">Why</div><div style="font-size:13px;color:var(--navy);margin-bottom:4px;">'+(r.statusReason||'')+'</div><div class="lq-label">Script</div><div class="lq-script">'+(r.script||'')+'</div>'+(r.priceToQuote?'<div class="lq-label">Price to Quote</div><div class="lq-price-tag">'+r.priceToQuote+'</div>':'')+'<div class="lq-label">Next Step</div><div class="lq-next-step">'+(r.nextStep||'')+'</div>'+flagsHtml+memberHtml+'</div></div><div style="text-align:right;margin-top:10px;"><button class="lq-reset-btn" onclick="resetLQ()">New Qualification</button></div>';
+}
+
+function resetLQ(){
+  document.getElementById('lq-name').value='';document.getElementById('lq-context').value='';document.getElementById('lq-existing').value='no';
+  [].slice.call(document.querySelectorAll('#lq-service-grid .lq-service-chip.selected')).forEach(function(el){el.classList.remove('selected');});
+  lqSelectedServices=[];document.getElementById('lq-result-area').innerHTML='';
+}
+
+async function saveLQToLog(name,services,result){
+  try{await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'LeadLog',values:[[new Date().toISOString(),name,services.join(', '),result.status,result.statusReason,result.priceToQuote,result.nextStep,(result.flags||[]).join('; ')]]})});}catch(e){}
+}
+
+document.addEventListener('DOMContentLoaded',function(){phRenderList();});
+</script>
+</body>
+</html>
