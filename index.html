@@ -638,6 +638,19 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
       </div>
     </div>
   </div>
+  <!-- Patient disambiguation modal -->
+  <div id="ph-modal-dupe" class="ph-modal-overlay" style="display:none;">
+    <div class="ph-modal">
+      <button class="ph-modal-close" onclick="document.getElementById('ph-modal-dupe').style.display='none'">&#10005;</button>
+      <div class="ph-modal-title">Patient Already in Database?</div>
+      <p style="font-size:13px;color:var(--warm-gray);margin-bottom:16px;">We found possible matches. Is one of these the same patient?</p>
+      <div id="ph-dupe-list" style="margin-bottom:16px;display:flex;flex-direction:column;gap:8px;"></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;justify-content:flex-end;">
+        <button class="ph-action-btn ph-btn-primary" onclick="phDupeConfirmNew()">None of these — Add New Patient</button>
+      </div>
+    </div>
+  </div>
+
   <div id="ph-modal-visit" class="ph-modal-overlay" style="display:none;">
     <div class="ph-modal">
       <button class="ph-modal-close" onclick="document.getElementById('ph-modal-visit').style.display='none'">&#10005;</button>
@@ -1377,21 +1390,99 @@ function phRenderDetail(id){
   document.getElementById('ph-detail-body').innerHTML='<div class="section" style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;"><div><div class="section-title">'+p.fname+' '+p.lname+'</div><div class="section-sub" style="margin-bottom:0;">'+(p.dob?'DOB: '+p.dob+' &middot; ':'')+''+(p.phone||'')+' &middot; '+(p.email||'')+'</div>'+(p.membership&&p.membership!=='None'?'<span style="display:inline-block;margin-top:6px;padding:3px 10px;background:var(--gold-pale);color:#92400E;border-radius:3px;font-size:11px;font-weight:600;">'+p.membership+'</span>':'')+(p.notes?'<div style="margin-top:8px;font-size:12px;color:var(--warm-gray);">Notes: '+p.notes+'</div>':'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="ph-action-btn ph-btn-primary" onclick="phShowAddVisit()">+ Log Visit</button><button class="ph-action-btn ph-btn-outline" onclick="phDeletePatient(\''+p.id+'\')">Delete</button></div></div></div><div class="section"><div class="section-title">Visit History</div>'+(visits.length===0?'<div class="ph-empty" style="padding:24px 0;">No visits logged yet.</div>':'<table class="ph-visit-table"><thead><tr><th>Date</th><th>Treatments</th><th>Products</th><th>Injector</th><th>Total</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table>')+'</div>';
 }
 
-function phShowAddPatient(){document.getElementById('ph-modal-patient').style.display='flex';}
+function phFuzzyMatches(fname,lname,phone){
+  const patients=phGetPatients();
+  const fn=(fname||'').toLowerCase().trim();
+  const ln=(lname||'').toLowerCase().trim();
+  const ph=(phone||'').replace(/\D/g,'');
+  return patients.filter(function(p){
+    const pfn=p.fname.toLowerCase();
+    const pln=(p.lname||'').toLowerCase();
+    const pph=(p.phone||'').replace(/\D/g,'');
+    if(ph&&pph&&ph.length>=7&&pph.includes(ph.slice(-7)))return true;
+    if(ln&&pln&&ln===pln&&fn&&pfn&&pfn[0]===fn[0])return true;
+    if(fn&&pfn&&fn===pfn&&ln&&pln&&pln[0]===ln[0])return true;
+    return false;
+  });
+}
+
+function phShowDupeModal(matches,onConfirmNew){
+  window._phDupeOnNew=onConfirmNew;
+  const list=document.getElementById('ph-dupe-list');
+  list.innerHTML=matches.map(function(p){
+    const visits=phGetVisits().filter(function(v){return v.patientId===p.id;});
+    const lastVisit=visits.length?visits.sort(function(a,b){return b.visitDate.localeCompare(a.visitDate);})[0].visitDate:'No visits';
+    return '<div style="background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">'
+      +'<div><div style="font-weight:600;font-family:\'Cormorant Garamond\',serif;font-size:16px;color:var(--plum);">'+p.fname+' '+p.lname+'</div>'
+      +'<div style="font-size:12px;color:var(--warm-gray);margin-top:2px;">'+(p.dob?'DOB: '+p.dob+' &middot; ':'')+''+(p.phone||'')+(p.membership&&p.membership!=='None'?' &middot; '+p.membership:'')+'</div>'
+      +'<div style="font-size:11px;color:var(--mauve);margin-top:2px;">'+visits.length+' visit'+(visits.length!==1?'s':'')+' &middot; Last: '+lastVisit+'</div></div>'
+      +'<button class="ph-action-btn ph-btn-gold" onclick="phDupeSelectExisting(\''+p.id+'\')">This is the patient</button>'
+      +'</div>';
+  }).join('');
+  document.getElementById('ph-modal-dupe').style.display='flex';
+}
+
+function phDupeSelectExisting(id){
+  document.getElementById('ph-modal-dupe').style.display='none';
+  document.getElementById('ph-modal-patient').style.display='none';
+  phShowDetail(id);
+}
+
+function phDupeConfirmNew(){
+  document.getElementById('ph-modal-dupe').style.display='none';
+  if(typeof window._phDupeOnNew==='function')window._phDupeOnNew();
+}
+
+function phShowAddPatient(){
+  const q=(document.getElementById('ph-search').value||'').trim();
+  const parts=q.split(' ');
+  const fn=parts[0]||'';
+  const ln=parts.slice(1).join(' ')||'';
+  const matches=q?phFuzzyMatches(fn,ln,''):[];
+  if(matches.length){
+    phShowDupeModal(matches,function(){
+      ['phf-fname','phf-lname','phf-dob','phf-phone','phf-email','phf-notes'].forEach(function(id){document.getElementById(id).value='';});
+      document.getElementById('phf-membership').value='None';
+      if(parts.length>=2){document.getElementById('phf-fname').value=fn;document.getElementById('phf-lname').value=ln;}
+      else{document.getElementById('phf-fname').value=fn;}
+      document.getElementById('ph-modal-patient').style.display='flex';
+    });
+  } else {
+    if(parts.length>=2){document.getElementById('phf-fname').value=fn;document.getElementById('phf-lname').value=ln;}
+    else if(fn){document.getElementById('phf-fname').value=fn;}
+    document.getElementById('ph-modal-patient').style.display='flex';
+  }
+}
+
 function phShowAddVisit(){document.getElementById('phv-date').value=new Date().toISOString().split('T')[0];document.getElementById('ph-modal-visit').style.display='flex';}
 function phShowImport(){document.getElementById('ph-modal-import').style.display='flex';}
 
 function phSavePatient(){
   const fname=document.getElementById('phf-fname').value.trim();
   const lname=document.getElementById('phf-lname').value.trim();
+  const phone=document.getElementById('phf-phone').value.trim();
   if(!fname){alert('First name required.');return;}
+  // Final fuzzy check before saving — catches cases where staff skipped search
+  const matches=phFuzzyMatches(fname,lname,phone);
+  if(matches.length){
+    document.getElementById('ph-modal-patient').style.display='none';
+    phShowDupeModal(matches,function(){
+      phDoSaveNewPatient(fname,lname,phone);
+    });
+    return;
+  }
+  phDoSaveNewPatient(fname,lname,phone);
+}
+
+function phDoSaveNewPatient(fname,lname,phone){
   const patients=phGetPatients();
-  const p={id:phUID(),fname:fname,lname:lname,dob:document.getElementById('phf-dob').value,phone:document.getElementById('phf-phone').value.trim(),email:document.getElementById('phf-email').value.trim(),membership:document.getElementById('phf-membership').value,notes:document.getElementById('phf-notes').value.trim(),createdAt:new Date().toISOString()};
+  const p={id:phUID(),fname:fname,lname:lname,dob:document.getElementById('phf-dob').value,phone:phone,email:document.getElementById('phf-email').value.trim(),membership:document.getElementById('phf-membership').value,notes:document.getElementById('phf-notes').value.trim(),createdAt:new Date().toISOString()};
   patients.push(p);phSavePatients(patients);phSyncPatientToSheet(p);
   document.getElementById('ph-modal-patient').style.display='none';
   ['phf-fname','phf-lname','phf-dob','phf-phone','phf-email','phf-notes'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('phf-membership').value='None';
   phRenderList();
+  phShowDetail(p.id);
 }
 
 function phSaveVisit(){
