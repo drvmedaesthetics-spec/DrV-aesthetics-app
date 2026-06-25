@@ -609,6 +609,12 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
         <a class="ph-action-btn ph-btn-gold" style="text-decoration:none;display:inline-block;" href="https://docs.google.com/spreadsheets/d/1JLQkAkGUpSa_TprQMSALS5YIhAy-faYOA6FhB-T8ITI" target="_blank">View Sheet &#8599;</a>
       </div>
     </div>
+    <div id="ph-stats-bar" style="margin-bottom:10px;"></div>
+    <div id="ph-filter-tabs" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="ph-action-btn ph-btn-outline" id="phf-all" onclick="phSetFilter('all',this)" style="font-size:11px;padding:5px 12px;">All Patients</button>
+      <button class="ph-action-btn ph-btn-outline" id="phf-lapsed" onclick="phSetFilter('lapsed',this)" style="font-size:11px;padding:5px 12px;">&#9888; Lapsed 60+ days</button>
+      <button class="ph-action-btn ph-btn-outline" id="phf-nomember" onclick="phSetFilter('nomember',this)" style="font-size:11px;padding:5px 12px;">&#9733; No Membership</button>
+    </div>
     <div id="ph-list-body"></div>
   </div>
   <div id="ph-view-detail" style="display:none;">
@@ -680,7 +686,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
         </div>
       </div>
       <div class="ph-form-row single">
-        <div class="form-group"><label>Treatments Done</label><input id="phv-treatments" placeholder="e.g. Forehead tox, lip filler 1 syringe"/></div>
+        <div class="form-group"><label>Treatments Done</label><input id="phv-treatments" placeholder="e.g. Forehead tox, lip filler 1 syringe" oninput="phVisitUpsell()"/></div>
       </div>
       <div class="ph-form-row single">
         <div class="form-group"><label>Products Used / Retail Sold</label><input id="phv-products" placeholder="e.g. ZO Daily Power Defense"/></div>
@@ -700,6 +706,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
       <div class="ph-form-row single">
         <div class="form-group"><label>Notes</label><textarea id="phv-notes" placeholder="Clinical notes, reactions, follow-up plan..."></textarea></div>
       </div>
+      <div id="phv-upsell" style="display:none;margin-bottom:12px;"></div>
       <div class="ph-modal-btns">
         <button class="ph-action-btn ph-btn-outline" onclick="document.getElementById('ph-modal-visit').style.display='none'">Cancel</button>
         <button id="phv-save-btn" class="ph-action-btn ph-btn-primary" onclick="phSaveVisit()">Save Visit</button>
@@ -776,6 +783,15 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
       <textarea class="lq-notes-field" id="lq-context" rows="2" placeholder="e.g. Asking about lip filler. Mentioned she's on blood thinners. Wants natural look. Saw our reel on Instagram."></textarea>
     </div>
     <button class="lq-qualify-btn" id="lq-start-btn" onclick="lqStartChat()">Start Qualification Chat</button>
+  </div>
+
+  <!-- Objection Handler -->
+  <div class="section" style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="document.getElementById('lq-objections-body').style.display=document.getElementById('lq-objections-body').style.display==='none'?'block':'none'">
+      <div class="section-title" style="margin-bottom:0;">&#128172; Objection Scripts</div>
+      <span style="font-size:11px;color:var(--warm-gray);">tap to expand</span>
+    </div>
+    <div id="lq-objections-body" style="display:none;margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 
   <!-- Chat thread -->
@@ -1383,16 +1399,32 @@ function phShowList(){document.getElementById('ph-view-list').style.display='';d
 function phShowDetail(id){phCurrentPatientId=id;document.getElementById('ph-view-list').style.display='none';document.getElementById('ph-view-detail').style.display='';phRenderDetail(id);}
 
 function phRenderList(){
+  phRenderStats();
   const q=(document.getElementById('ph-search').value||'').toLowerCase();
   let patients=phGetPatients();
   if(q)patients=patients.filter(p=>(p.fname+' '+p.lname+' '+(p.phone||'')).toLowerCase().includes(q));
-  patients.sort((a,b)=>(a.lname+a.fname).localeCompare(b.lname+b.fname));
   const visits=phGetVisits();
+  const now=new Date();
+  if(window._phFilter==='lapsed'){
+    patients=patients.filter(function(p){
+      const pv=visits.filter(function(v){return v.patientId===p.id;});
+      if(!pv.length)return false;
+      const last=pv.sort(function(a,b){return b.visitDate.localeCompare(a.visitDate);})[0].visitDate;
+      return Math.floor((now-new Date(last))/86400000)>=60;
+    });
+  } else if(window._phFilter==='nomember'){
+    patients=patients.filter(function(p){return !p.membership||p.membership==='None';});
+  }
+  patients.sort((a,b)=>(a.lname+a.fname).localeCompare(b.lname+b.fname));
   const body=document.getElementById('ph-list-body');
-  if(!patients.length){body.innerHTML='<div class="ph-empty">No patients yet.<br>Add one or import from Aesthetic Record CSV.</div>';return;}
+  if(!patients.length){body.innerHTML='<div class="ph-empty">No patients match this filter.</div>';return;}
   body.innerHTML=patients.map(p=>{
     const vc=visits.filter(v=>v.patientId===p.id).length;
-    return '<div class="ph-patient-card" onclick="phShowDetail(\''+p.id+'\')"><div><div class="ph-patient-name">'+p.lname+', '+p.fname+'</div><div class="ph-patient-meta">'+(p.dob||'')+' &middot; '+(p.phone||'')+' &middot; '+(p.membership||'No membership')+'</div></div><div class="ph-visit-count">'+vc+' visit'+(vc!==1?'s':'')+'</div></div>';
+    const pv=visits.filter(function(v){return v.patientId===p.id;});
+    const isLapsed=pv.length&&Math.floor((now-new Date(pv.sort(function(a,b){return b.visitDate.localeCompare(a.visitDate);})[0].visitDate))/86400000)>=60;
+    const noMember=!p.membership||p.membership==='None';
+    const badge=(isLapsed?'<span style="font-size:10px;color:#B26B6B;font-weight:600;margin-left:6px;">LAPSED</span>':'')+(noMember&&vc>1?'<span style="font-size:10px;color:#92400E;font-weight:600;margin-left:6px;">NO MEMBER</span>':'');
+    return '<div class="ph-patient-card" onclick="phShowDetail(\''+p.id+'\')"><div><div class="ph-patient-name">'+p.lname+', '+p.fname+badge+'</div><div class="ph-patient-meta">'+(p.dob||'')+' &middot; '+(p.phone||'')+' &middot; '+(p.membership||'No membership')+'</div></div><div class="ph-visit-count">'+vc+' visit'+(vc!==1?'s':'')+'</div></div>';
   }).join('');
 }
 
@@ -1403,7 +1435,7 @@ function phRenderDetail(id){
   const visits=phGetVisits().filter(v=>v.patientId===id).sort((a,b)=>b.visitDate.localeCompare(a.visitDate));
   const injPill=function(i){return i==='Dr. V'?'<span class="ph-injector-pill pill-drv">Dr. V</span>':'<span class="ph-injector-pill pill-anna">'+i+'</span>';};
   const rows=visits.map(function(v){return '<tr><td style="white-space:nowrap;font-weight:600;">'+v.visitDate+'</td><td>'+(v.treatments||'&mdash;')+'</td><td style="color:var(--warm-gray);font-size:12px;">'+(v.products||'&mdash;')+'</td><td>'+injPill(v.injector||'Anna')+'</td><td style="font-weight:600;white-space:nowrap;">$'+parseFloat(v.total||0).toLocaleString()+'</td><td style="font-size:12px;color:var(--warm-gray);">'+(v.notes||'&mdash;')+'</td><td><button class="ph-action-btn ph-btn-outline" style="padding:4px 10px;font-size:10px;" onclick="phOpenEditVisit(\''+v.id+'\')">Edit</button></td></tr>';}).join('');
-  document.getElementById('ph-detail-body').innerHTML='<div class="section" style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;"><div><div class="section-title">'+p.fname+' '+p.lname+'</div><div class="section-sub" style="margin-bottom:0;">'+(p.dob?'DOB: '+p.dob+' &middot; ':'')+''+(p.phone||'')+' &middot; '+(p.email||'')+'</div>'+(p.membership&&p.membership!=='None'?'<span style="display:inline-block;margin-top:6px;padding:3px 10px;background:var(--gold-pale);color:#92400E;border-radius:3px;font-size:11px;font-weight:600;">'+p.membership+'</span>':'')+(p.notes?'<div style="margin-top:8px;font-size:12px;color:var(--warm-gray);">Notes: '+p.notes+'</div>':'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="ph-action-btn ph-btn-primary" onclick="phShowAddVisit()">+ Log Visit</button><button class="ph-action-btn ph-btn-outline" onclick="phOpenEditPatient(\''+p.id+'\')">Edit</button><button class="ph-action-btn ph-btn-outline" onclick="phDeletePatient(\''+p.id+'\')">Delete</button></div></div></div><div class="section"><div class="section-title">Visit History</div>'+(visits.length===0?'<div class="ph-empty" style="padding:24px 0;">No visits logged yet.</div>':'<table class="ph-visit-table"><thead><tr><th>Date</th><th>Treatments</th><th>Products</th><th>Injector</th><th>Total</th><th>Notes</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>')+'</div>';
+  document.getElementById('ph-detail-body').innerHTML=phMemberAlert(p,visits)+'<div class="section" style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;"><div><div class="section-title">'+p.fname+' '+p.lname+'</div><div class="section-sub" style="margin-bottom:0;">'+(p.dob?'DOB: '+p.dob+' &middot; ':'')+''+(p.phone||'')+' &middot; '+(p.email||'')+'</div>'+(p.membership&&p.membership!=='None'?'<span style="display:inline-block;margin-top:6px;padding:3px 10px;background:var(--gold-pale);color:#92400E;border-radius:3px;font-size:11px;font-weight:600;">'+p.membership+'</span>':'')+(p.notes?'<div style="margin-top:8px;font-size:12px;color:var(--warm-gray);">Notes: '+p.notes+'</div>':'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="ph-action-btn ph-btn-primary" onclick="phShowAddVisit()">+ Log Visit</button><button class="ph-action-btn ph-btn-outline" onclick="phOpenEditPatient(\''+p.id+'\')">Edit</button><button class="ph-action-btn ph-btn-outline" onclick="phDeletePatient(\''+p.id+'\')">Delete</button></div></div></div><div class="section"><div class="section-title">Visit History</div>'+(visits.length===0?'<div class="ph-empty" style="padding:24px 0;">No visits logged yet.</div>':'<table class="ph-visit-table"><thead><tr><th>Date</th><th>Treatments</th><th>Products</th><th>Injector</th><th>Total</th><th>Notes</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>')+'</div>';
 }
 
 function phFuzzyMatches(fname,lname,phone){
@@ -1846,8 +1878,117 @@ function getLQSystem() {
 }
 
 
+// ─── REVENUE SNAPSHOT ────────────────────────────────────
+function phRenderStats() {
+  const el = document.getElementById('ph-stats-bar');
+  if (!el) return;
+  const visits = phGetVisits();
+  const patients = phGetPatients();
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const monthVisits = visits.filter(function(v){ return v.visitDate >= monthStart; });
+  const monthRev = monthVisits.reduce(function(s,v){ return s + parseFloat(v.total||0); }, 0);
+  const avgTicket = monthVisits.length ? Math.round(monthRev / monthVisits.length) : 0;
+  const memberCount = patients.filter(function(p){ return p.membership && p.membership !== 'None'; }).length;
+  const lapsedCount = patients.filter(function(p){
+    const pv = visits.filter(function(v){ return v.patientId === p.id; });
+    if (!pv.length) return false;
+    const last = pv.sort(function(a,b){ return b.visitDate.localeCompare(a.visitDate); })[0].visitDate;
+    return Math.floor((now - new Date(last)) / 86400000) >= 60;
+  }).length;
+  function statCard(label, value, color) {
+    return '<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 10px;text-align:center;">'
+      +'<div style="font-size:10px;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">'+label+'</div>'
+      +'<div style="font-size:22px;font-weight:700;color:'+color+';font-family:\'Cormorant Garamond\',serif;">'+value+'</div>'
+      +'</div>';
+  }
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px;">'
+    + statCard('This Month', '$'+monthRev.toLocaleString(), 'var(--plum)')
+    + statCard('Avg Ticket', '$'+avgTicket.toLocaleString(), 'var(--mauve)')
+    + statCard('Members', memberCount, 'var(--gold)')
+    + statCard('Lapsed 60+', lapsedCount, lapsedCount > 0 ? '#B26B6B' : 'var(--warm-gray)')
+    + '</div>';
+}
+
+// ─── PATIENT LIST FILTER ──────────────────────────────────
+window._phFilter = 'all';
+function phSetFilter(f, el) {
+  window._phFilter = f;
+  document.querySelectorAll('#ph-filter-tabs button').forEach(function(b){ b.style.background=''; b.style.color=''; b.style.borderColor=''; });
+  if (el) { el.style.background='var(--plum)'; el.style.color='#fff'; el.style.borderColor='var(--plum)'; }
+  phRenderList();
+}
+
+// ─── MEMBERSHIP ALERT ─────────────────────────────────────
+function phMemberAlert(p, visits) {
+  if (p.membership && p.membership !== 'None') return '';
+  const total = visits.reduce(function(s,v){ return s + parseFloat(v.total||0); }, 0);
+  if (total < 250) return '';
+  const savings = Math.round(total * 0.13);
+  const script = total > 1000
+    ? '"'+p.fname+', with what you invest here, VIP Basic would have saved you around $'+savings.toLocaleString()+' — want me to walk you through it real quick?"'
+    : '"'+p.fname+', we have a membership that gives you monthly treatments and savings on everything — worth a look?"';
+  return '<div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:10px;padding:14px 16px;margin-bottom:14px;">'
+    +'<div style="font-weight:600;font-size:12px;color:#92400E;margin-bottom:6px;">&#9733; Membership Opportunity &mdash; $'+total.toLocaleString()+' lifetime spend, no membership</div>'
+    +'<div style="font-size:12px;color:#78350F;margin-bottom:8px;line-height:1.5;">VIP Basic ($195/mo) includes 1 free facial, MN, or peel per month + 15% off ZO + $11/unit tox. Pays for itself in one visit.</div>'
+    +'<div style="font-size:12px;background:#FEF3C7;border-radius:6px;padding:10px;font-style:italic;color:#92400E;border:1px solid #FDE68A;">Say: '+script+'</div>'
+    +'</div>';
+}
+
+// ─── CHECKOUT UPSELL PROMPT ───────────────────────────────
+const UPSELL_RULES = [
+  { triggers:['microneedling'], msg:'Package upgrade opportunity', tip:'Single: $350. Series of 3: $950 (saves $100). Offer the series before checkout — "Most people do a series of 3 to start, and it saves you $100."' },
+  { triggers:['geneo','oxygen facial','glo2'], msg:'Geneo series saves vs. single', tip:'Single: $275. Series of 3: $750 (saves $75). "You get better results doing it in a series — most patients start with 3."' },
+  { triggers:['sylfirm','rfmn','rf microneedling'], msg:'Lighten & Tighten package — save $1,350', tip:'3 singles: $4,950. L&T package: $3,600. Saves $1,350 when patient commits to the series today.' },
+  { triggers:['lip filler','lip enhancement'], msg:'Chin + Lip combo upsell', tip:'Lip alone: $850. Chin + Lip combo: $1,500 (saves $300 vs. separate). "Adding the chin balance makes the lips look so much better — and it\'s $300 less than booking separately."' },
+  { triggers:['sculptra','radiesse','biostimulator'], msg:'Biostimulators membership pitch', tip:'Retail per session: $1,950. Biostimulators membership ($100/mo): $650/vial. Pitch the membership if patient is doing a series.' },
+  { triggers:['o-shot','o shot'], msg:'Reframe as BLOOM — higher ticket', tip:'O-Shot standalone: $1,300. BLOOM (O-Shot + PRF + Tox): $2,100. Always pitch Bloom first — better result and $800 higher ticket.' },
+  { triggers:['p-shot','p shot'], msg:'Reframe as RISE — higher ticket', tip:'P-Shot standalone: $1,950. RISE (P-Shot + PRF + Tox): $2,500. Always pitch Rise first — better result and $550 higher ticket.' },
+  { triggers:['forehead','crow','glabella','lip flip','bunny','chin','dao','masseter','tox','dysport','xeomin'], msg:'ZO retail at checkout', tip:'Tox patients who use ZO see longer-lasting results. Suggest Growth Factor Serum ($200) or Daily Power Defense ($190). "This will help your results last longer between treatments."' },
+  { triggers:['hair restoration','prp hair','prf hair'], msg:'Hair restoration series discount', tip:'Single: $1,350. Series of 3: $3,499 (saves $550). "Series of 3 gives dramatically better results and you save $550."' },
+];
+
+function phVisitUpsell() {
+  const t = (document.getElementById('phv-treatments').value || '').toLowerCase();
+  const el = document.getElementById('phv-upsell');
+  if (!el) return;
+  const hits = UPSELL_RULES.filter(function(r){ return r.triggers.some(function(tr){ return t.includes(tr); }); });
+  if (!hits.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<div style="font-size:11px;font-weight:600;color:var(--mauve);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Revenue Opportunities</div>'
+    + hits.map(function(h){
+        return '<div style="padding:10px 12px;background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;margin-bottom:6px;">'
+          +'<div style="font-weight:600;font-size:12px;color:#166534;margin-bottom:3px;">&#x1F4B0; '+h.msg+'</div>'
+          +'<div style="font-size:11px;color:#15803D;line-height:1.5;">'+h.tip+'</div></div>';
+      }).join('');
+}
+
+// ─── OBJECTION HANDLER ────────────────────────────────────
+const OBJECTIONS = [
+  { q:'"It\'s too expensive / I need to think about it"', a:'"I totally get that — it\'s an investment. A lot of our patients find the membership makes it really manageable. Can I show you what that looks like?"' },
+  { q:'"Can I get a discount?"', a:'"We don\'t do one-off discounts, but our membership is designed exactly for that — real savings every visit. Want me to walk you through it?"' },
+  { q:'"I\'ll come back when I\'m ready"', a:'"Of course! Want to go ahead and grab a consult spot — no obligation. The $25 goes toward your treatment that day, so you\'re not losing anything."' },
+  { q:'"I saw it cheaper somewhere else"', a:'"We price by area and guarantee results — not by the unit. A lot of places quote per-unit and it ends up costing more for a full result. Our all-in pricing means no surprises."' },
+  { q:'"I\'m not sure I\'m a candidate"', a:'"That\'s exactly what the consult is for — she does a full assessment and only recommends what\'s right for you. The $25 goes toward your treatment same day."' },
+  { q:'"Do you do payment plans?"', a:'"Yes — we offer Cherry Financing, which breaks it into monthly payments with no surprises. Want me to walk you through what that looks like?"' },
+  { q:'"I need to ask my husband/wife first"', a:'"Of course! While you\'re thinking about it, want me to send you a quick summary of what we talked about so you have the numbers handy?"' },
+  { q:'"I\'m scared it\'ll look fake"', a:'"That\'s the most common thing we hear — and honestly, it\'s our provider\'s specialty. She\'s known for results that look like you just look really refreshed. Most people can\'t even tell."' },
+];
+
+function lqRenderObjections() {
+  const el = document.getElementById('lq-objections-body');
+  if (!el) return;
+  el.innerHTML = OBJECTIONS.map(function(o){
+    return '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;">'
+      +'<div style="font-weight:600;font-size:12px;color:var(--plum);margin-bottom:5px;">'+o.q+'</div>'
+      +'<div style="font-size:12px;color:var(--cocoa);font-style:italic;line-height:1.5;">'+o.a+'</div>'
+      +'</div>';
+  }).join('');
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
   phRenderList();
+  lqRenderObjections();
   // Enter to send in LQ chat (Shift+Enter = new line)
   document.getElementById('lq-msg').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); lqSend(); }
