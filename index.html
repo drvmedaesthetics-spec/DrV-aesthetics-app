@@ -277,6 +277,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
     <button class="mode-btn" onclick="switchMode('history',this)">&#x25C9; Patient History</button>
     <button class="mode-btn" onclick="switchMode('qualify',this)">&#x2605; Lead Qualifier</button>
     <button class="mode-btn" onclick="switchMode('settings',this)">&#x2699; Pricing &amp; Packages</button>
+    <button class="mode-btn" onclick="switchMode('huddle',this)">&#x1F4CB; Weekly Huddle</button>
   </div>
 </div>
 
@@ -831,6 +832,23 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- MODE 6: WEEKLY HUDDLE                                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="mode-huddle" class="mode-panel">
+  <div class="section" style="margin-bottom:14px;">
+    <div class="section-title">Weekly Huddle</div>
+    <div class="section-sub">Pull appointments from GHL, prep your team, then update patient records the following week.</div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+      <button class="ph-action-btn ph-btn-primary" id="huddle-this-btn" onclick="huddleLoad('this')" style="padding:10px 20px;">&#x1F4C5; Pull This Week</button>
+      <button class="ph-action-btn ph-btn-outline" id="huddle-last-btn" onclick="huddleLoad('last')" style="padding:10px 20px;">&#x2705; Last Week — Update DB</button>
+      <button class="ph-action-btn ph-btn-outline" onclick="huddleCopy()" style="padding:10px 20px;">&#x1F4CB; Copy Huddle</button>
+    </div>
+  </div>
+  <div id="huddle-status" style="font-size:12px;color:var(--warm-gray);font-style:italic;margin-bottom:10px;"></div>
+  <div id="huddle-body"></div>
+</div>
+
 </div><!-- end main -->
 
 <script>
@@ -842,6 +860,7 @@ function switchMode(mode, el) {
   (el || event.target).classList.add('active');
   if (mode === 'settings') renderPricingForm();
   if (mode === 'history') phSyncFromSheet(false);
+  if (mode === 'huddle') huddleInit();
 }
 
 // ─── PRICING ENGINE ──────────────────────────────────────
@@ -1984,6 +2003,155 @@ function lqRenderObjections() {
       +'<div style="font-size:12px;color:var(--cocoa);font-style:italic;line-height:1.5;">'+o.a+'</div>'
       +'</div>';
   }).join('');
+}
+
+// ─── WEEKLY HUDDLE ────────────────────────────────────────
+let huddleAppts = [];
+
+function huddleInit() {
+  if (!huddleAppts.length) {
+    document.getElementById('huddle-body').innerHTML = '<div class="ph-empty">Click "Pull This Week" to load appointments from GHL.</div>';
+  }
+}
+
+function huddleWeekRange(offset) {
+  // offset 0 = this week (Mon–Sun), offset -1 = last week
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun,1=Mon...
+  const diffToMon = day === 0 ? -6 : 1 - day;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() + diffToMon + offset * 7);
+  mon.setHours(0, 0, 0, 0);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  sun.setHours(23, 59, 59, 999);
+  return { start: mon.toISOString(), end: sun.toISOString(), label: mon.toLocaleDateString('en-US', {month:'short',day:'numeric'}) + ' – ' + sun.toLocaleDateString('en-US', {month:'short',day:'numeric'}) };
+}
+
+async function huddleLoad(which) {
+  const status = document.getElementById('huddle-status');
+  const body = document.getElementById('huddle-body');
+  const offset = which === 'last' ? -1 : 0;
+  const range = huddleWeekRange(offset);
+  status.textContent = '⟳ Loading appointments ' + range.label + '...';
+  body.innerHTML = '';
+  try {
+    const r = await fetch('/api/ghl', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'appointments', startTime: range.start, endTime: range.end })
+    });
+    const data = await r.json();
+    const events = data.events || data.appointments || data.data || [];
+    huddleAppts = events;
+    status.textContent = '✓ ' + events.length + ' appointment' + (events.length !== 1 ? 's' : '') + ' for ' + range.label;
+    huddleRender(events, which, range.label);
+  } catch(e) {
+    status.textContent = '✗ Error loading: ' + e.message;
+  }
+}
+
+function huddleRender(events, which, rangeLabel) {
+  const body = document.getElementById('huddle-body');
+  const patients = phGetPatients();
+  const visits = phGetVisits();
+
+  if (!events.length) {
+    body.innerHTML = '<div class="ph-empty">No appointments found for this period.</div>';
+    return;
+  }
+
+  // Sort by start time
+  events.sort(function(a, b) {
+    return (a.startTime || a.start || '').localeCompare(b.startTime || b.start || '');
+  });
+
+  // Group by day
+  const byDay = {};
+  events.forEach(function(e) {
+    const dt = new Date(e.startTime || e.start || '');
+    const dayKey = dt.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+    if (!byDay[dayKey]) byDay[dayKey] = [];
+    byDay[dayKey].push(e);
+  });
+
+  let html = '<div style="font-weight:700;font-size:16px;font-family:\'Cormorant Garamond\',serif;color:var(--plum);margin-bottom:16px;">Week of ' + rangeLabel + '</div>';
+
+  Object.keys(byDay).forEach(function(day) {
+    html += '<div style="margin-bottom:20px;">'
+      + '<div style="font-weight:700;font-size:13px;color:var(--mauve);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;">' + day + '</div>';
+
+    byDay[day].forEach(function(e) {
+      const name = (e.contact && (e.contact.name || e.contact.firstName + ' ' + (e.contact.lastName||''))) || e.title || 'Unknown';
+      const time = new Date(e.startTime || e.start || '').toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+      const service = e.notes || e.appointmentStatus || e.calendarId || '';
+      const contactId = e.contactId || (e.contact && e.contact.id) || '';
+
+      // Try to match to patient DB
+      const nameParts = name.trim().split(' ');
+      const fn = nameParts[0] || '';
+      const ln = nameParts.slice(1).join(' ') || '';
+      const matched = patients.find(function(p) {
+        return p.fname.toLowerCase() === fn.toLowerCase() && (p.lname||'').toLowerCase() === (ln||'').toLowerCase();
+      });
+
+      const memberBadge = matched && matched.membership && matched.membership !== 'None'
+        ? '<span style="font-size:10px;background:var(--gold-pale);color:#92400E;border-radius:3px;padding:2px 6px;font-weight:600;margin-left:6px;">' + matched.membership + '</span>' : '';
+
+      const lastVisit = matched ? (function() {
+        const pv = visits.filter(function(v){ return v.patientId === matched.id; }).sort(function(a,b){ return b.visitDate.localeCompare(a.visitDate); });
+        return pv.length ? 'Last visit: ' + pv[0].visitDate + ' — ' + (pv[0].treatments||'') : 'No visits logged';
+      })() : '<span style="color:#B26B6B;">Not in patient DB</span>';
+
+      const logBtn = which === 'last'
+        ? (matched
+            ? '<button class="ph-action-btn ph-btn-primary" style="font-size:10px;padding:4px 10px;" onclick="huddleLogVisit(\''+matched.id+'\')">+ Log Visit</button>'
+            : '<button class="ph-action-btn ph-btn-outline" style="font-size:10px;padding:4px 10px;" onclick="huddleAddPatient(\''+fn+'\',\''+ln+'\')">+ Add to DB</button>')
+        : (matched ? '<button class="ph-action-btn ph-btn-outline" style="font-size:10px;padding:4px 10px;" onclick="phShowDetail(\''+matched.id+'\');switchMode(\'history\')">View Record</button>' : '');
+
+      html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
+        + '<div>'
+        + '<div style="font-weight:600;font-size:14px;color:var(--cocoa);">' + time + ' &nbsp;·&nbsp; ' + name + memberBadge + '</div>'
+        + (service ? '<div style="font-size:12px;color:var(--mauve);margin-top:2px;">' + service + '</div>' : '')
+        + '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px;">' + lastVisit + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">' + logBtn + '</div>'
+        + '</div>';
+    });
+
+    html += '</div>';
+  });
+
+  body.innerHTML = html;
+}
+
+function huddleLogVisit(patientId) {
+  // Switch to patient history, open the patient, and open log visit modal
+  switchMode('history', document.querySelector('[onclick*="history"]'));
+  setTimeout(function() {
+    phShowDetail(patientId);
+    setTimeout(function() { phShowAddVisit(); }, 300);
+  }, 200);
+}
+
+function huddleAddPatient(fn, ln) {
+  switchMode('history', document.querySelector('[onclick*="history"]'));
+  setTimeout(function() {
+    document.getElementById('phf-fname').value = fn;
+    document.getElementById('phf-lname').value = ln;
+    document.getElementById('phf-modal-title').textContent = 'New Patient';
+    document.getElementById('ph-modal-patient').style.display = 'flex';
+  }, 200);
+}
+
+function huddleCopy() {
+  const body = document.getElementById('huddle-body');
+  const text = body ? body.innerText : '';
+  if (!text.trim()) { alert('Load appointments first.'); return; }
+  navigator.clipboard.writeText(text).then(function() {
+    const btn = document.querySelector('[onclick="huddleCopy()"]');
+    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(function(){ btn.innerHTML = '&#x1F4CB; Copy Huddle'; }, 2000); }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
