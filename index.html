@@ -242,6 +242,20 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
 .lq-reset-btn:hover{background:var(--gold-pale);}
 .lq-notes-field{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);outline:none;resize:vertical;min-height:60px;margin-top:4px;}
 .lq-notes-field:focus{border-color:var(--mauve);}
+/* CHAT BUBBLES */
+.lq-bubble-staff{display:flex;justify-content:flex-end;gap:8px;}
+.lq-bubble-staff .lq-bubble-body{background:linear-gradient(135deg,var(--mauved),var(--plum));color:var(--white);border-radius:14px 14px 2px 14px;padding:11px 15px;max-width:78%;font-size:13px;line-height:1.6;}
+.lq-bubble-zoe{display:flex;gap:10px;align-items:flex-start;}
+.lq-bubble-avatar{width:30px;height:30px;border-radius:50%;background:var(--gold-pale);border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--plum);flex-shrink:0;margin-top:2px;}
+.lq-bubble-zoe .lq-bubble-body{background:var(--white);border:1px solid var(--border);border-radius:2px 14px 14px 14px;padding:14px 16px;max-width:84%;font-size:13px;line-height:1.7;box-shadow:0 1px 3px rgba(74,58,60,.06);}
+.lq-bubble-zoe .lq-bubble-body h4{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;color:var(--plum);margin-bottom:6px;}
+.lq-bubble-zoe .lq-bubble-body .lq-step{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.lq-bubble-zoe .lq-bubble-body .lq-step:last-child{border-bottom:none;}
+.lq-bubble-zoe .lq-bubble-body .lq-step-num{font-size:11px;font-weight:700;color:var(--mauve);min-width:20px;padding-top:1px;}
+.lq-bubble-zoe .lq-bubble-body .lq-script-inline{background:var(--gold-pale);border-left:3px solid var(--gold);padding:8px 12px;border-radius:0 6px 6px 0;margin-top:8px;font-style:italic;font-size:13px;line-height:1.6;}
+.lq-bubble-zoe .lq-bubble-body .lq-flag-tag{display:inline-block;background:#FEF2F2;color:var(--red);border:1px solid #F0B8B8;border-radius:4px;font-size:11px;font-weight:700;padding:2px 8px;margin:2px 2px 0 0;}
+.lq-bubble-zoe .lq-bubble-body .lq-status-line{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:20px;display:inline-block;margin-bottom:10px;}
+.lq-bubble-label{font-size:10px;color:var(--warm-gray);margin-bottom:4px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;}
 </style>
 </head>
 <body>
@@ -678,51 +692,68 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
-<!-- MODE 4: LEAD QUALIFIER                                  -->
+<!-- MODE 4: LEAD QUALIFIER (CHAT)                           -->
 <!-- ═══════════════════════════════════════════════════════ -->
 <div id="mode-qualify" class="mode-panel">
-  <div class="section" style="margin-bottom:14px;">
-    <div class="section-title">In-Room Lead Qualifier</div>
-    <div class="section-sub">Staff use only. Enter the lead's name and service interest &#8212; Zoe KB logic qualifies them instantly.</div>
-  </div>
-  <div class="lq-form">
-    <div class="row-grid" style="margin-bottom:14px;">
-      <div class="form-group"><label>Lead / Patient Name</label><input id="lq-name" placeholder="First name"/></div>
-      <div class="form-group"><label>Existing Patient?</label>
+
+  <!-- Context bar (collapses after first message) -->
+  <div id="lq-setup" class="section" style="margin-bottom:14px;">
+    <div class="section-title">Lead Qualifier</div>
+    <div class="section-sub">Set the context once, then have a real back-and-forth. Paste what the patient said — get step-by-step guidance on how to respond and qualify.</div>
+    <div class="row-grid" style="margin-bottom:12px;">
+      <div class="form-group">
+        <label>Patient / Lead Name</label>
+        <input id="lq-name" placeholder="First name"/>
+      </div>
+      <div class="form-group">
+        <label>Patient Type</label>
         <select id="lq-existing">
           <option value="no">New lead</option>
           <option value="yes">Existing patient</option>
           <option value="member">Active member</option>
         </select>
       </div>
-    </div>
-    <div class="form-group" style="margin-bottom:10px;"><label>Service Interest</label>
-      <div class="lq-service-grid" id="lq-service-grid">
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Neurotoxin / Tox</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Lip Filler</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Filler (other)</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Laser Hair Removal</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Tattoo Removal</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">IPL Photofacial</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">CO2 Laser</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Bloom &amp; Rise</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">P-Shot / O-Shot</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">IV Therapy</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Weight Loss</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Membership</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Geneo Facial</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Vampire Breast Lift</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">Microneedling</div>
-        <div class="lq-service-chip" onclick="lqToggleService(this)">RF Microneedling</div>
+      <div class="form-group">
+        <label>How did they come in?</label>
+        <select id="lq-source">
+          <option value="instagram">Instagram / social</option>
+          <option value="google">Google search</option>
+          <option value="referral">Patient referral</option>
+          <option value="walkin">Walk-in</option>
+          <option value="phone">Phone call</option>
+          <option value="sms">Text / SMS</option>
+          <option value="email">Email</option>
+          <option value="event">Event / promotion</option>
+          <option value="other">Other</option>
+        </select>
       </div>
     </div>
-    <div class="form-group" style="margin-bottom:0;">
-      <label>Additional Context (optional)</label>
-      <textarea class="lq-notes-field" id="lq-context" placeholder="e.g. Has blonde hair, recently tanned, on blood thinners, history of cold sores, asks about pricing..."></textarea>
+    <div class="form-group">
+      <label>What are they interested in? Any known details?</label>
+      <textarea class="lq-notes-field" id="lq-context" rows="2" placeholder="e.g. Asking about lip filler. Mentioned she's on blood thinners. Wants natural look. Saw our reel on Instagram."></textarea>
     </div>
-    <button class="lq-qualify-btn" id="lq-btn" onclick="qualifyLead()">&#9733; Qualify Lead</button>
+    <button class="lq-qualify-btn" id="lq-start-btn" onclick="lqStartChat()">Start Qualification Chat</button>
   </div>
-  <div id="lq-result-area"></div>
+
+  <!-- Chat thread -->
+  <div id="lq-chat-area" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div id="lq-chat-header" style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--plum);font-weight:600;"></div>
+      <button class="lq-reset-btn" onclick="lqReset()">&#8592; New Lead</button>
+    </div>
+    <div id="lq-thread" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;"></div>
+    <div class="section" style="padding:16px;">
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Paste what the patient said — or add new info</label>
+        <textarea class="lq-notes-field" id="lq-msg" rows="3" placeholder="e.g. &quot;She just said she had lip filler 2 months ago somewhere else and wants it dissolved first&quot;&#10;or paste their exact message..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="lq-qualify-btn" id="lq-send-btn" onclick="lqSend()" style="width:auto;padding:12px 28px;margin-top:0;">Send</button>
+        <span id="lq-typing" style="font-size:12px;color:var(--warm-gray);display:none;"><span class="spinner" style="vertical-align:middle;margin-right:6px;"></span>Qualifying...</span>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -1341,65 +1372,128 @@ function phImportCSV(){
 }
 
 // ─── LEAD QUALIFIER ───────────────────────────────────────
-let lqSelectedServices=[];
-function lqToggleService(el){
-  el.classList.toggle('selected');
-  lqSelectedServices=[].slice.call(document.querySelectorAll('#lq-service-grid .lq-service-chip.selected')).map(function(c){return c.textContent.trim();});
+// ─── LEAD QUALIFIER CHAT ─────────────────────────────────
+let lqMessages = [];
+let lqLeadName = '';
+let lqLeadContext = '';
+
+function lqStartChat() {
+  lqLeadName = document.getElementById('lq-name').value.trim() || 'Lead';
+  const existing = document.getElementById('lq-existing').value;
+  const source = document.getElementById('lq-source');
+  const sourceLabel = source.options[source.selectedIndex].text;
+  const existingLabel = existing==='yes'?'Existing patient':existing==='member'?'Active member':'New lead';
+  const context = document.getElementById('lq-context').value.trim();
+  lqLeadContext = 'Lead: '+lqLeadName+' | '+existingLabel+' | Came via: '+sourceLabel+(context?'\nInitial info: '+context:'');
+  lqMessages = [];
+  document.getElementById('lq-thread').innerHTML = '';
+  document.getElementById('lq-chat-header').textContent = lqLeadName + ' — Qualification Chat';
+  document.getElementById('lq-setup').style.display = 'none';
+  document.getElementById('lq-chat-area').style.display = '';
+  document.getElementById('lq-msg').focus();
+  lqSend(lqLeadContext + '\n\nGive me step-by-step guidance on how to qualify and respond to this lead.');
+}
+
+async function lqSend(autoMsg) {
+  const textarea = document.getElementById('lq-msg');
+  const userText = typeof autoMsg === 'string' ? autoMsg : textarea.value.trim();
+  if (!userText) return;
+  if (typeof autoMsg !== 'string') { textarea.value = ''; lqAppendBubble('staff', userText); }
+  lqMessages.push({ role:'user', content:userText });
+  const btn = document.getElementById('lq-send-btn');
+  const typing = document.getElementById('lq-typing');
+  btn.disabled = true; typing.style.display = '';
+  try {
+    const res = await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,system:getLQSystem(),messages:lqMessages})});
+    const data = await res.json();
+    const reply = data.content&&data.content[0] ? data.content[0].text : 'Could not get a response.';
+    lqMessages.push({role:'assistant',content:reply});
+    lqAppendBubble('zoe', reply);
+    if (lqMessages.length <= 2) lqLogToSheet(reply);
+  } catch(e) {
+    lqAppendBubble('zoe','Connection error — please check your internet and try again.');
+  }
+  btn.disabled = false; typing.style.display = 'none';
+  document.getElementById('lq-thread').scrollTop = 999999;
+}
+
+function lqAppendBubble(who, text) {
+  const thread = document.getElementById('lq-thread');
+  const div = document.createElement('div');
+  if (who === 'staff') {
+    div.innerHTML = '<div style="text-align:right;margin-bottom:3px;"><span class="lq-bubble-label">Staff</span></div>'
+      +'<div class="lq-bubble-staff"><div class="lq-bubble-body">'+escHtml(text)+'</div></div>';
+  } else {
+    let body = '';
+    try {
+      const t = text.trim();
+      const json = t.startsWith('{') ? JSON.parse(t) : null;
+      if (json && json.status) {
+        const sm = {'BOOK NOW':'status-book','NEEDS CONSULT':'status-consult','FLAG FOR PROVIDER':'status-flag','NOT A CANDIDATE':'status-no','GET MORE INFO':'status-info'};
+        const sc = sm[json.status]||'status-info';
+        const flags = (json.flags||[]).map(function(f){return '<span class="lq-flag-tag">&#9873; '+escHtml(f)+'</span>';}).join(' ');
+        body = '<h4>'+escHtml(lqLeadName)+'</h4>'
+          +'<span class="lq-status-line '+sc+'">'+escHtml(json.status)+'</span>'
+          +'<div style="font-size:12px;color:var(--warm-gray);margin-bottom:10px;">'+escHtml(json.statusReason||'')+'</div>'
+          +(json.script?'<div class="lq-script-inline">&ldquo;'+escHtml(json.script)+'&rdquo;</div>':'')
+          +(json.priceToQuote?'<div style="margin-top:10px;"><span class="lq-price-tag">'+escHtml(json.priceToQuote)+'</span></div>':'')
+          +(json.nextStep?'<div style="margin-top:10px;font-size:13px;font-weight:600;color:var(--plum);">&rarr; '+escHtml(json.nextStep)+'</div>':'')
+          +(flags?'<div style="margin-top:8px;">'+flags+'</div>':'')
+          +(json.membershipPitch?'<div style="margin-top:10px;font-size:12px;padding:8px 12px;background:var(--gold-pale);border-radius:6px;border-left:3px solid var(--gold);">'+escHtml(json.membershipPitch)+'</div>':'');
+      } else throw new Error();
+    } catch(e) {
+      body = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+        .replace(/\n\n/g,'</p><p style="margin:6px 0 0;">')
+        .replace(/\n/g,'<br>');
+      body = '<p style="margin:0;">'+body+'</p>';
+    }
+    div.innerHTML = '<div style="margin-bottom:3px;"><span class="lq-bubble-label">Qualifier</span></div>'
+      +'<div class="lq-bubble-zoe"><div class="lq-bubble-avatar">Z</div><div class="lq-bubble-body">'+body+'</div></div>';
+  }
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function lqReset() {
+  lqMessages = [];
+  document.getElementById('lq-thread').innerHTML = '';
+  document.getElementById('lq-setup').style.display = '';
+  document.getElementById('lq-chat-area').style.display = 'none';
+  document.getElementById('lq-name').value = '';
+  document.getElementById('lq-context').value = '';
+  document.getElementById('lq-existing').value = 'no';
+  document.getElementById('lq-source').value = 'instagram';
+}
+
+async function lqLogToSheet(reply) {
+  try {
+    var status='',nextStep='';
+    try{var j=JSON.parse(reply);status=j.status||'';nextStep=j.nextStep||'';}catch(e){}
+    await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'LeadLog',
+        values:[[new Date().toISOString(),lqLeadName,lqLeadContext,status,nextStep]]})});
+  } catch(e){}
 }
 
 function getLQSystem() {
   const pr = getPricingText();
-  return 'You are the in-room Lead Qualifier for Dr. V Medical Aesthetics (Pensacola FL). Staff enters a lead name, service interest, and any known context. You apply full practice knowledge to return a structured qualification decision.\n\nPRACTICE RULES:\n- Provider (Anna NP): Thu & Fri only, 11am-8pm. New aesthetic leads go here.\n- Dr. V (MD): Established patients only. Wellness/hormone. Bloom & Rise.\n- Consult: $100, credited toward same-day treatment.\n- $25 booking fee for non-members (auto-collected, credited same-day).\n- Booking portal: https://api.leadconnectorhq.com/widget/bookings/anna-crisco-personal-calendar-yuabbvabw\n\nCURRENT PRICING (use these exact numbers — updated by practice admin):\n'+pr+'\n\nNEUROTOXIN:\n- Brands: Dysport, Xeomin. NEVER say Botox.\n- Quote tox by area from CURRENT PRICING above (never per-unit to non-members).\n- Bank Your Botox: $120/mo, 10 units at $12/unit.\n\nFILLER:\n- Brands: Restylane line. NEVER say Juvederm.\n- Quote per-area prices from CURRENT PRICING above.\n- LIP FILLER PRESCREENING (in-room): cold sore/HSV history (Valtrex needed); blood thinners (flag provider); 3 lip photos needed; prior filler history; chin/jaw goals = price higher.\n- P-Shot: $1950 provider / $2100 Dr. V. O-Shot: $1300 provider / $1400 Dr. V.\n\nLASER HAIR REMOVAL:\n- Diode 810nm. Screen hair color first.\n- NOT A CANDIDATE: white, gray, red, blonde hair.\n- CANDIDATE: brown or black hair.\n- Sun/spray tan past 3-4 weeks = wait. Pregnant = wait. Accutane past 6 months = wait. PCOS = still works.\n- Pricing (3-session/8-session): Upper Lip $399/$975; Underarms/Bikini/Chin/Neck $475/$1150; Full Face $599/$1475; Lower Arms $675/$1650; Brazilian/Chest $945/$2295; Full Back/Full Legs $1075/$2625.\n\nTATTOO REMOVAL:\n- Q-Switch. No consult for XS/S/M/L. XL = consult.\n- Must be 12+ weeks old. Per session (black/color): XS $125/$150; S $175/$200; M $250/$300; L $375/$450.\n\nIPL:\n- NEVER say patient is a candidate or cleared. Provider makes final call.\n- GREEN: fair skin FST I-III, no recent sun, spots/redness concerns.\n- YELLOW: medium-tan skin, recent sun, melasma, photosensitizing meds, cold sore history, active acne.\n- RED: pregnant, active tan, on Accutane, open lesions, keloid history, lupus, changing mole.\n- Series (6 sessions + ZO kit): Full Face $2325; Face+Neck $3135; Face+Neck+Chest $3945. Maintenance: Full Face $175; Face+Neck $275.\n\nCO2 LASER: use price from CURRENT PRICING above. ZO prep kit included. Sticker-shock qualify. 6-8 weeks ZO preconditioning.\n\nBLOOM & RISE:\n- Bloom (female): O-Shot + PRF + Xeomin = $2100. Provider and Dr. V.\n- Rise (male): P-Shot + PRF + Xeomin = $2500. Provider and Dr. V.\n- $100 consult, credited. NEVER say just an O-Shot.\n\nVAMPIRE BREAST LIFT: $1949 single / $3649 x2. Sticker-shock. NEVER say: adds volume, increases cup size.\n\nIV THERAPY: First visit $100 consult (credited). Myers $175, High-C $200, NAD+ $400-600, Hydration $125.\nVITAMIN INJECTIONS (no consult): B12 $35, Lipo-C $45, Glutathione IM $75, Vit D $40.\nWEIGHT LOSS: $100 consult credited. Semaglutide/Tirzepatide.\nHORMONE CONSULT: $350 NOT credited. Dr. V only. Prescreening required before booking.\nGENEO FACIAL: use price from CURRENT PRICING above. No consult.\nMICRONEEDLING: use price from CURRENT PRICING above.\nRF MICRONEEDLING (Sylfirm): use price from CURRENT PRICING above.\n\nSTICKER-SHOCK (required before quoting >$950): Frame it before the number.\nMEMBERSHIPS: LHR $50 activation, area locked. Tattoo $50 activation, 30-min $250/mo.\nPOST-TREATMENT URGENT (breathing trouble, severe swelling, vision changes, chest pain): ER immediately.\n\nReturn ONLY valid JSON, no markdown:\n{"status":"BOOK NOW|NEEDS CONSULT|FLAG FOR PROVIDER|NOT A CANDIDATE|GET MORE INFO","statusReason":"one sentence","script":"2-4 natural sentences staff says to lead","priceToQuote":"specific price or empty string","nextStep":"exact next action","flags":["array of flags or empty"],"membershipPitch":"brief pitch or empty string"}';
+  return 'You are the in-room Lead Qualifier for Dr. V Medical Aesthetics (Pensacola FL). Staff enters a lead name, service interest, and any known context. You apply full practice knowledge to return a structured qualification decision.\n\nPRACTICE RULES:\n- Provider (Anna NP): Thu & Fri only, 11am-8pm. New aesthetic leads go here.\n- Dr. V (MD): Established patients only. Wellness/hormone. Bloom & Rise.\n- Consult: $100, credited toward same-day treatment.\n- $25 booking fee for non-members (auto-collected, credited same-day).\n- Booking portal: https://api.leadconnectorhq.com/widget/bookings/anna-crisco-personal-calendar-yuabbvabw\n\nCURRENT PRICING (use these exact numbers — updated by practice admin):\n'+pr+'\n\nNEUROTOXIN:\n- Brands: Dysport, Xeomin. NEVER say Botox.\n- Quote tox by area from CURRENT PRICING above (never per-unit to non-members).\n- Bank Your Botox: $120/mo, 10 units at $12/unit.\n\nFILLER:\n- Brands: Restylane line. NEVER say Juvederm.\n- Quote per-area prices from CURRENT PRICING above.\n- LIP FILLER PRESCREENING (in-room): cold sore/HSV history (Valtrex needed); blood thinners (flag provider); 3 lip photos needed; prior filler history; chin/jaw goals = price higher.\n- P-Shot: $1950 provider / $2100 Dr. V. O-Shot: $1300 provider / $1400 Dr. V.\n\nLASER HAIR REMOVAL:\n- Diode 810nm. Screen hair color first.\n- NOT A CANDIDATE: white, gray, red, blonde hair.\n- CANDIDATE: brown or black hair.\n- Sun/spray tan past 3-4 weeks = wait. Pregnant = wait. Accutane past 6 months = wait. PCOS = still works.\n- Pricing (3-session/8-session): Upper Lip $399/$975; Underarms/Bikini/Chin/Neck $475/$1150; Full Face $599/$1475; Lower Arms $675/$1650; Brazilian/Chest $945/$2295; Full Back/Full Legs $1075/$2625.\n\nTATTOO REMOVAL:\n- Q-Switch. No consult for XS/S/M/L. XL = consult.\n- Must be 12+ weeks old. Per session (black/color): XS $125/$150; S $175/$200; M $250/$300; L $375/$450.\n\nIPL:\n- NEVER say patient is a candidate or cleared. Provider makes final call.\n- GREEN: fair skin FST I-III, no recent sun, spots/redness concerns.\n- YELLOW: medium-tan skin, recent sun, melasma, photosensitizing meds, cold sore history, active acne.\n- RED: pregnant, active tan, on Accutane, open lesions, keloid history, lupus, changing mole.\n- Series (6 sessions + ZO kit): Full Face $2325; Face+Neck $3135; Face+Neck+Chest $3945. Maintenance: Full Face $175; Face+Neck $275.\n\nCO2 LASER: use price from CURRENT PRICING above. ZO prep kit included. Sticker-shock qualify. 6-8 weeks ZO preconditioning.\n\nBLOOM & RISE:\n- Bloom (female): O-Shot + PRF + Xeomin = $2100. Provider and Dr. V.\n- Rise (male): P-Shot + PRF + Xeomin = $2500. Provider and Dr. V.\n- $100 consult, credited. NEVER say just an O-Shot.\n\nVAMPIRE BREAST LIFT: $1949 single / $3649 x2. Sticker-shock. NEVER say: adds volume, increases cup size.\n\nIV THERAPY: First visit $100 consult (credited). Myers $175, High-C $200, NAD+ $400-600, Hydration $125.\nVITAMIN INJECTIONS (no consult): B12 $35, Lipo-C $45, Glutathione IM $75, Vit D $40.\nWEIGHT LOSS: $100 consult credited. Semaglutide/Tirzepatide.\nHORMONE CONSULT: $350 NOT credited. Dr. V only. Prescreening required before booking.\nGENEO FACIAL: use price from CURRENT PRICING above. No consult.\nMICRONEEDLING: use price from CURRENT PRICING above.\nRF MICRONEEDLING (Sylfirm): use price from CURRENT PRICING above.\n\nSTICKER-SHOCK (required before quoting >$950): Frame it before the number.\nMEMBERSHIPS: LHR $50 activation, area locked. Tattoo $50 activation, 30-min $250/mo.\nPOST-TREATMENT URGENT (breathing trouble, severe swelling, vision changes, chest pain): ER immediately.\n\nRESPONSE FORMAT:\n- For the FIRST message (initial lead summary): return valid JSON only: {"status":"BOOK NOW|NEEDS CONSULT|FLAG FOR PROVIDER|NOT A CANDIDATE|GET MORE INFO","statusReason":"one sentence","script":"2-4 natural sentences staff says to lead","priceToQuote":"specific price or empty string","nextStep":"exact next action","flags":["array or empty"],"membershipPitch":"brief pitch or empty"}\n- For follow-up messages in the conversation: reply in plain conversational text with clear step-by-step guidance. Use **bold** for key actions. Be direct and practical — staff is talking to the patient right now.';
 }
 
-async function qualifyLead(){
-  const name=document.getElementById('lq-name').value.trim()||'the lead';
-  const existing=document.getElementById('lq-existing').value;
-  const context=document.getElementById('lq-context').value.trim();
-  if(!lqSelectedServices.length){alert('Select at least one service.');return;}
-  const btn=document.getElementById('lq-btn');
-  btn.disabled=true;btn.textContent='...Qualifying';
-  document.getElementById('lq-result-area').innerHTML='<div style="padding:20px;text-align:center;"><div class="spinner"></div></div>';
-  const msg='Lead name: '+name+'\nPatient type: '+(existing==='yes'?'Existing patient':existing==='member'?'Active member':'New lead')+'\nService interest: '+lqSelectedServices.join(', ')+'\n'+(context?'Additional context: '+context:'')+'\nQualify this lead.';
-  try{
-    const res=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:getLQSystem(),messages:[{role:'user',content:msg}]})});
-    const data=await res.json();
-    const text=data.content&&data.content[0]?data.content[0].text:'{}';
-    let result;
-    try{result=JSON.parse(text);}catch(e){result={status:'GET MORE INFO',statusReason:'Could not parse response.',script:text,priceToQuote:'',nextStep:'Review manually.',flags:[],membershipPitch:''};}
-    renderLQResult(name,result);saveLQToLog(name,lqSelectedServices,result);
-  }catch(e){
-    document.getElementById('lq-result-area').innerHTML='<div class="warning-box"><div class="warning-title">Connection Error</div><div class="warning-text">Could not reach AI. Check your connection.</div></div>';
-  }
-  btn.disabled=false;btn.textContent='\u2605 Qualify Lead';
-}
-
-function renderLQResult(name,r){
-  const statusMap={'BOOK NOW':'status-book','NEEDS CONSULT':'status-consult','FLAG FOR PROVIDER':'status-flag','NOT A CANDIDATE':'status-no','GET MORE INFO':'status-info'};
-  const statusClass=statusMap[r.status]||'status-info';
-  const flagsHtml=r.flags&&r.flags.length?'<div class="lq-label">Flags</div><ul class="lq-flag-list">'+r.flags.map(function(f){return '<li>'+f+'</li>';}).join('')+'</ul>':'';
-  const memberHtml=r.membershipPitch?'<div class="lq-label">Membership Opportunity</div><div class="lq-member-pitch">'+r.membershipPitch+'</div>':'';
-  document.getElementById('lq-result-area').innerHTML='<div class="lq-result"><div class="lq-result-header"><span class="lq-status-badge '+statusClass+'">'+r.status+'</span><span style="font-size:13px;color:var(--warm-gray);">'+name+' &middot; '+lqSelectedServices.join(', ')+'</span></div><div class="lq-result-body"><div class="lq-label">Why</div><div style="font-size:13px;color:var(--navy);margin-bottom:4px;">'+(r.statusReason||'')+'</div><div class="lq-label">Script</div><div class="lq-script">'+(r.script||'')+'</div>'+(r.priceToQuote?'<div class="lq-label">Price to Quote</div><div class="lq-price-tag">'+r.priceToQuote+'</div>':'')+'<div class="lq-label">Next Step</div><div class="lq-next-step">'+(r.nextStep||'')+'</div>'+flagsHtml+memberHtml+'</div></div><div style="text-align:right;margin-top:10px;"><button class="lq-reset-btn" onclick="resetLQ()">New Qualification</button></div>';
-}
-
-function resetLQ(){
-  document.getElementById('lq-name').value='';document.getElementById('lq-context').value='';document.getElementById('lq-existing').value='no';
-  [].slice.call(document.querySelectorAll('#lq-service-grid .lq-service-chip.selected')).forEach(function(el){el.classList.remove('selected');});
-  lqSelectedServices=[];document.getElementById('lq-result-area').innerHTML='';
-}
-
-async function saveLQToLog(name,services,result){
-  try{await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'LeadLog',values:[[new Date().toISOString(),name,services.join(', '),result.status,result.statusReason,result.priceToQuote,result.nextStep,(result.flags||[]).join('; ')]]})});}catch(e){}
-}
 
 document.addEventListener('DOMContentLoaded', async function() {
   phRenderList();
+  // Enter to send in LQ chat (Shift+Enter = new line)
+  document.getElementById('lq-msg').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); lqSend(); }
+  });
   // Pull latest pricing from sheet so all devices stay in sync
   const synced = await syncPricingFromSheet();
-  if (synced) {
-    // If settings tab is already open, refresh the form
-    if (document.getElementById('mode-settings').classList.contains('visible')) renderPricingForm();
-  }
+  if (synced && document.getElementById('mode-settings').classList.contains('visible')) renderPricingForm();
 });
 </script>
 </body>
