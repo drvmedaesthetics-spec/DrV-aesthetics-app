@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Dr. V Aesthetics — Clinical Builder</title>
+<title>Consult IQ Pro — Dr. V Medical Aesthetics</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
 <style>
 :root {
@@ -262,7 +262,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
 
 <div class="hdr">
   <div class="hdr-inner">
-    <div class="logo">DR. V AESTHETICS<span>STAFF PORTAL — CLINICAL TOOLS</span></div>
+    <div class="logo">CONSULT IQ PRO<span>DR. V MEDICAL AESTHETICS — STAFF PORTAL</span></div>
     <div style="display:flex;align-items:center;gap:14px;">
       <a href="mailto:admin@drvaesthetics.com" style="font-size:11px;color:var(--warm-gray);text-decoration:none;font-family:'Lato',sans-serif;">admin@drvaesthetics.com</a>
       <div class="badge">CONFIDENTIAL · CLINICAL USE ONLY</div>
@@ -803,53 +803,120 @@ function switchMode(mode, el) {
 // ─── PRICING ENGINE ──────────────────────────────────────
 const PRICING_DEFAULTS = {
   tox: [
-    { key:'foreheadGlabella', label:'Forehead + Glabella', price:600 },
-    { key:'crowsFeet',        label:"Crow's Feet",          price:300 },
-    { key:'lipFlip',          label:'Lip Flip',             price:150 },
-    { key:'masseter',         label:'Masseter',             price:960 },
-    { key:'platysmal',        label:'Platysmal Bands',      price:425 },
-    { key:'nefertiti',        label:'Nefertiti Lift',       price:1200 },
-    { key:'chin',             label:'Chin (Mentalis)',      price:150 },
-    { key:'daos',             label:'DAOs',                 price:150 },
+    { key:'foreheadGlabella', label:'Forehead + Glabella',   price:600 },
+    { key:'crowsFeet',        label:"Crow's Feet",            price:300 },
+    { key:'lipFlip',          label:'Lip Flip',               price:150 },
+    { key:'masseter',         label:'Masseter (TMJ/slimming)',price:960 },
+    { key:'nefertiti',        label:'Nefertiti Lift',         price:1200 },
+    { key:'platysmal',        label:'Platysmal Bands',        price:425 },
+    { key:'chin',             label:'Chin (Mentalis)',        price:150 },
+    { key:'daos',             label:'DAOs',                   price:150 },
+    { key:'hyperhidrosis',    label:'Hyperhidrosis (sweating)',price:1000 },
+    { key:'bunny',            label:'Bunny Lines',            price:100 },
+    { key:'gummySmile',       label:'Gummy Smile',            price:150 },
   ],
   filler: [
-    { key:'cheeks',     label:'Cheek Volumization',   price:1999, note:'up to 3x Contour' },
-    { key:'jawline',    label:'Jawline Definition',   price:2500, note:'2x Defyne' },
-    { key:'temples',    label:'Temple Restoration',   price:1800, note:'2x Lyft' },
-    { key:'chin',       label:'Chin Alone',           price:950,  note:'1x Defyne' },
-    { key:'chinLip',    label:'Chin + Lip Balance',   price:1500, note:'1x Defyne + 1x Silk' },
-    { key:'tearTrough', label:'Tear Trough',          price:1100, note:'2x Eyelight 0.5cc' },
-    { key:'marionette', label:'Marionette Lines',     price:950,  note:'1x Refyne' },
-    { key:'nlf',        label:'Nasolabial Folds',     price:950,  note:'1x Refyne' },
-    { key:'lips',       label:'Lip Filler',           price:850,  note:'1x Silk' },
+    { key:'cheeks',     label:'Mid Cheek Volumization',  price:1999, note:'up to 3x Contour' },
+    { key:'jawline',    label:'Jawline Definition',      price:2500, note:'2x Defyne' },
+    { key:'temples',    label:'Temple Restoration',      price:1800, note:'2x Lyft' },
+    { key:'chin',       label:'Chin Alone',              price:950,  note:'1x Defyne' },
+    { key:'chinLip',    label:'Chin + Lip Balance',      price:1500, note:'1x Defyne + 1x Silk' },
+    { key:'tearTrough', label:'Tear Trough',             price:1100, note:'2x Eyelight 0.5cc' },
+    { key:'marionette', label:'Marionette Area',         price:950,  note:'1x Refyne' },
+    { key:'nlf',        label:'Nasolabial Folds (NLF)',  price:950,  note:'1x Refyne' },
+    { key:'lips',       label:'Lip Filler (1 syringe)',  price:850,  note:'1x Silk' },
+    { key:'lips2',      label:'Lip Filler (2 syringes)', price:1500, note:'2x Silk' },
+    { key:'turkeyNeck', label:'Turkey Neck',             price:2400 },
+    { key:'swanNeck',   label:'Swan Neck',               price:3800 },
+    { key:'fatDis3',    label:'PC/DC Fat Dissolving x3', price:1500 },
   ],
   biostim: [
-    { key:'sculptra2',  label:'Sculptra + ZO Kit (2 vials)',     price:1950 },
-    { key:'radiesse',   label:'HD Radiesse + ZO Kit (2 syringes)', price:1950 },
-    { key:'sculptra4',  label:'Sculptra 4-Vial Bundle',          price:3600 },
+    { key:'sculptra2',  label:'Sculptra Facial + ZO Kit (2 vials)',    price:1950 },
+    { key:'radiesse',   label:'Radiesse Facial + ZO Kit (2 syringes)', price:1950 },
+    { key:'sculptra4',  label:'Sculptra Facial x4',                    price:3600 },
+    { key:'biostim1',   label:'Biostimulatory Add-On x1',              price:900 },
   ],
   devices: [
-    { key:'sylfirmFace',       label:'Sylfirm X RFMN – Face (per session)', price:1650 },
-    { key:'sylfirmNeck',       label:'Sylfirm X – Neck Add-on',             price:200 },
-    { key:'microneedling1',    label:'Microneedling (single)',               price:350 },
-    { key:'microneedling3',    label:'Microneedling Series of 3',           price:950 },
-    { key:'geneo1',            label:'Geneo Facial (single)',               price:275 },
-    { key:'geneo3',            label:'Geneo Series of 3',                  price:750 },
-    { key:'co2',               label:'CO2 Laser',                          price:1300 },
-    { key:'lightenTighten',    label:'Lighten & Tighten Package',          price:3800 },
+    { key:'sylfirmFace',    label:'Sylfirm X RFMN – Face (per session)', price:1650 },
+    { key:'sylfirmNeck',    label:'Sylfirm X – Neck Add-on',             price:200 },
+    { key:'rfmnExo',        label:'RFMN with Exosomes x1',               price:1300 },
+    { key:'lightenTighten', label:'Lighten & Tighten Package',           price:3600 },
+    { key:'microneedling1', label:'Microneedling (single)',               price:350 },
+    { key:'microneedling3', label:'Microneedling Series of 3',           price:950 },
+    { key:'banishMelasma',  label:'Banish Melasma Package',              price:3200 },
+    { key:'co2',            label:'CO2 Ablative Laser',                  price:1300 },
+    { key:'laserPeel',      label:'Laser Peel',                          price:850 },
+    { key:'chemPeel',       label:'Light Chemical Peel',                 price:275 },
+    { key:'ipl3',           label:'Lunchtime IPL x3 Package',            price:1200 },
+    { key:'iplAdd',         label:'IPL Add-On (single)',                  price:150 },
+    { key:'geneo1',         label:'Geneo Facial (single)',               price:275 },
+    { key:'geneo3',         label:'Geneo Series of 3',                   price:750 },
+    { key:'vampFacial',     label:'Vampire Facial (PRF)',                 price:950 },
+    { key:'vampFacelift',   label:'Vampire Facelift',                    price:1450 },
+    { key:'hairResto',      label:'Hair Restoration (PRF/PRP)',           price:1350 },
+    { key:'hairResto3',     label:'Hair Restoration x3 Package',         price:3499 },
+    { key:'handCO2',        label:'Hand Resurfacing (CO2)',               price:350 },
+  ],
+  threads: [
+    { key:'vLift',      label:'V Lift (Full Face)',    price:5500 },
+    { key:'ponytail',   label:'Ponytail Lift',         price:3500 },
+    { key:'chiseledJaw',label:'Chiseled Jaw',          price:3000 },
+    { key:'barbedPer',  label:'Barbed Thread (per thread)', price:100 },
+    { key:'smoothPer',  label:'PDO Smooth Thread (per thread)', price:25 },
+  ],
+  sexual: [
+    { key:'oshot',      label:'O-Shot',                     price:1300 },
+    { key:'oshot2',     label:'O-Shot x2',                  price:2400 },
+    { key:'oshot3',     label:'O-Shot x3',                  price:3000 },
+    { key:'pshot3free', label:'P-Shot x3 Get 1 Free',       price:5850 },
+    { key:'vbl',        label:'Vampire Breast Lift (single)',price:1949 },
+    { key:'vbl2',       label:'Vampire Breast Lift x2',     price:3649 },
+    { key:'vbl3',       label:'Vampire Breast Lift x3',     price:4200 },
+    { key:'vTrifecta',  label:'Vampire Trifecta',           price:4200 },
+    { key:'vWinglift',  label:'Vampire Wing Lift',          price:1325 },
+    { key:'bloom',      label:'Bloom (O-Shot + PRF + Xeomin)', price:2100 },
+    { key:'rise',       label:'Rise (P-Shot + PRF + Xeomin)',  price:2500 },
+  ],
+  iv: [
+    { key:'myers',      label:'Myers Cocktail',             price:150 },
+    { key:'getUpGo',    label:'Get Up & Go (Energy)',       price:150 },
+    { key:'immunity',   label:'Immunity (Immune Boost)',    price:175 },
+    { key:'recovery',   label:'Recovery & Performance',    price:175 },
+    { key:'reboot',     label:'Reboot (Reenergize)',        price:165 },
+    { key:'glutaDrip',  label:'Glutathione Drip',          price:120 },
+    { key:'quench',     label:'Quench (Hydration)',        price:80 },
+    { key:'b12',        label:'B12 Injection',             price:30 },
+    { key:'vitD',       label:'Vitamin D Injection',       price:30 },
+    { key:'skinnyShot', label:'Skinny Shot (Lipo-C)',      price:30 },
+    { key:'glp1',       label:'GLP-1 Monthly (Weight Loss)',price:450 },
   ],
   zo: [
-    { key:'dpd',     label:'Daily Power Defense',        price:190 },
-    { key:'gfs',     label:'Getting Skin Ready / GFS',   price:200 },
-    { key:'wtr',     label:'Wrinkle + Texture Repair',   price:168 },
-    { key:'spf',     label:'Smartone SPF',               price:54 },
-    { key:'pigment', label:'Pigment Control + HQ',       price:240 },
+    { key:'dpd',     label:'Daily Power Defense 1.7oz',    price:173 },
+    { key:'gfs',     label:'Getting Skin Ready / GFS',     price:200 },
+    { key:'wtr',     label:'Wrinkle + Texture Repair',     price:159 },
+    { key:'spf',     label:'Smart Tone SPF 50',            price:70 },
+    { key:'pigment', label:'Pigment Control + HQ 4%',      price:77 },
+    { key:'aox',     label:'AOX Serum 1.7oz',              price:178 },
+    { key:'gfs2',    label:'Growth Factor Serum',          price:168 },
+    { key:'rne',     label:'Radical Night Repair',         price:185 },
+    { key:'vitC',    label:'10% Vitamin C Self-Activating',price:108 },
+    { key:'rozatrol',label:'Rozatrol',                     price:93 },
+    { key:'eyeCreme',label:'Eye Brightening Creme',        price:130 },
+    { key:'kitAntiAge',label:'Anti-Aging Kit',             price:240 },
+    { key:'kitPigment',label:'Pigment Control + HQ Kit',   price:200 },
+    { key:'kitBright', label:'Skin Brightening + Texture Kit', price:300 },
   ],
 };
 
 const PRICING_SECTION_LABELS = {
-  tox:'Neurotoxin (Tox)',filler:'Filler — Per Area',
-  biostim:'Biostimulators',devices:'Devices & Packages',zo:'ZO Skin Health Retail'
+  tox:'Neurotoxin (Tox)',
+  filler:'Filler & Injectables — Per Area',
+  biostim:'Biostimulators',
+  devices:'Devices, Lasers & Packages',
+  threads:'PDO Threads',
+  sexual:'Sexual Health & PRF',
+  iv:'IV Therapy & Wellness Injections',
+  zo:'ZO Skin Health Retail'
 };
 
 function loadPricing() {
