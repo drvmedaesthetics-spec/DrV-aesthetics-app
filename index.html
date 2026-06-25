@@ -298,7 +298,16 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
   <div id="psec-patient" class="pb-section visible">
     <div class="section">
       <div class="section-title">Patient Info</div>
-      <div class="section-sub">Fill in after assessment. All fields inform the plan output.</div>
+      <div class="section-sub">Search existing patient to load their history, or fill in manually.</div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Look Up Existing Patient</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="p-pt-search" placeholder="Type name to search..." oninput="ptPlanSearch()" autocomplete="off" style="flex:1;padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);outline:none;"/>
+          <button class="pbtn" style="padding:8px 14px;font-size:12px;" onclick="document.getElementById('p-pt-results').innerHTML='';document.getElementById('p-pt-search').value='';">Clear</button>
+        </div>
+        <div id="p-pt-results" style="margin-top:6px;display:flex;flex-direction:column;gap:6px;"></div>
+        <div id="p-pt-loaded" style="display:none;margin-top:8px;padding:8px 12px;background:var(--gold-pale);border-radius:8px;font-size:12px;color:var(--amber);font-weight:600;"></div>
+      </div>
       <div class="row-grid">
         <div class="form-group"><label>First Name</label><input id="p-fname" placeholder="First name"/></div>
         <div class="form-group"><label>Age</label><input id="p-age" type="number" placeholder="Age" min="18" max="99"/></div>
@@ -398,6 +407,9 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
     <div id="p-flagbox"></div>
     <div id="p-logstatus"></div>
     <div id="p-planout"></div>
+    <div id="p-save-patient-row" style="display:none;margin-bottom:12px;">
+      <button class="ph-action-btn ph-btn-gold" onclick="ptPlanSaveToPatient()" style="width:100%;">&#x2764; Save Plan to Patient Record</button>
+    </div>
     <div class="btn-row">
       <button class="pbtn" onclick="planGoTo(2)">← Back</button>
       <button class="pbtn pbtn-primary" onclick="buildDocuments()">Generate Documents →</button>
@@ -590,7 +602,9 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
         <input class="ph-search" id="ph-search" placeholder="Search patients..." oninput="phRenderList()"/>
         <button class="ph-action-btn ph-btn-primary" onclick="phShowAddPatient()">+ New Patient</button>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span id="ph-sync-indicator" style="font-size:11px;color:var(--warm-gray);font-style:italic;"></span>
+        <button class="ph-action-btn ph-btn-outline" onclick="phSyncFromSheet(true)">&#8635; Sync</button>
         <button class="ph-action-btn ph-btn-outline" onclick="phShowImport()">&#8593; Import AR CSV</button>
         <a class="ph-action-btn ph-btn-gold" style="text-decoration:none;display:inline-block;" href="https://docs.google.com/spreadsheets/d/1JLQkAkGUpSa_TprQMSALS5YIhAy-faYOA6FhB-T8ITI" target="_blank">View Sheet &#8599;</a>
       </div>
@@ -604,7 +618,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
   <div id="ph-modal-patient" class="ph-modal-overlay" style="display:none;">
     <div class="ph-modal">
       <button class="ph-modal-close" onclick="document.getElementById('ph-modal-patient').style.display='none'">&#10005;</button>
-      <div class="ph-modal-title">New Patient</div>
+      <div id="phf-modal-title" class="ph-modal-title">New Patient</div>
       <div class="ph-form-row">
         <div class="form-group"><label>First Name</label><input id="phf-fname" placeholder="Jane"/></div>
         <div class="form-group"><label>Last Name</label><input id="phf-lname" placeholder="Smith"/></div>
@@ -634,7 +648,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
       </div>
       <div class="ph-modal-btns">
         <button class="ph-action-btn ph-btn-outline" onclick="document.getElementById('ph-modal-patient').style.display='none'">Cancel</button>
-        <button class="ph-action-btn ph-btn-primary" onclick="phSavePatient()">Save Patient</button>
+        <button id="phf-save-btn" class="ph-action-btn ph-btn-primary" onclick="phSavePatient()">Save Patient</button>
       </div>
     </div>
   </div>
@@ -654,7 +668,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
   <div id="ph-modal-visit" class="ph-modal-overlay" style="display:none;">
     <div class="ph-modal">
       <button class="ph-modal-close" onclick="document.getElementById('ph-modal-visit').style.display='none'">&#10005;</button>
-      <div class="ph-modal-title">Log Visit</div>
+      <div id="phv-modal-title" class="ph-modal-title">Log Visit</div>
       <div class="ph-form-row">
         <div class="form-group"><label>Visit Date</label><input id="phv-date" type="date"/></div>
         <div class="form-group"><label>Injector</label>
@@ -688,7 +702,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
       </div>
       <div class="ph-modal-btns">
         <button class="ph-action-btn ph-btn-outline" onclick="document.getElementById('ph-modal-visit').style.display='none'">Cancel</button>
-        <button class="ph-action-btn ph-btn-primary" onclick="phSaveVisit()">Save Visit</button>
+        <button id="phv-save-btn" class="ph-action-btn ph-btn-primary" onclick="phSaveVisit()">Save Visit</button>
       </div>
     </div>
   </div>
@@ -811,6 +825,7 @@ function switchMode(mode, el) {
   document.getElementById('mode-'+mode).classList.add('visible');
   (el || event.target).classList.add('active');
   if (mode === 'settings') renderPricingForm();
+  if (mode === 'history') phSyncFromSheet(false);
 }
 
 // ─── PRICING ENGINE ──────────────────────────────────────
@@ -1128,6 +1143,7 @@ Build the full phased plan.`;
       document.getElementById('p-flagbox').innerHTML = `<div class="warning-box"><div class="warning-title">⚠ Clinical Flags</div><div class="warning-text">${flagMatch[1].trim().replace(/\n/g,'<br>')}</div></div>`;
     }
     document.getElementById('p-planout').innerHTML = renderPlanSections(planText);
+    document.getElementById('p-save-patient-row').style.display = ptPlanLinkedId ? '' : 'none';
     logPlanToSheet(p, totals);
   } catch(e) {
     document.getElementById('p-planout').innerHTML = `<div class="warning-box"><div class="warning-title">Connection Error</div><div class="warning-text">Could not reach AI. Please check connection and try again.</div></div>`;
@@ -1386,8 +1402,8 @@ function phRenderDetail(id){
   if(!p)return;
   const visits=phGetVisits().filter(v=>v.patientId===id).sort((a,b)=>b.visitDate.localeCompare(a.visitDate));
   const injPill=function(i){return i==='Dr. V'?'<span class="ph-injector-pill pill-drv">Dr. V</span>':'<span class="ph-injector-pill pill-anna">'+i+'</span>';};
-  const rows=visits.map(function(v){return '<tr><td style="white-space:nowrap;font-weight:600;">'+v.visitDate+'</td><td>'+(v.treatments||'&mdash;')+'</td><td style="color:var(--warm-gray);font-size:12px;">'+(v.products||'&mdash;')+'</td><td>'+injPill(v.injector||'Anna')+'</td><td style="font-weight:600;white-space:nowrap;">$'+parseFloat(v.total||0).toLocaleString()+'</td><td style="font-size:12px;color:var(--warm-gray);">'+(v.notes||'&mdash;')+'</td></tr>';}).join('');
-  document.getElementById('ph-detail-body').innerHTML='<div class="section" style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;"><div><div class="section-title">'+p.fname+' '+p.lname+'</div><div class="section-sub" style="margin-bottom:0;">'+(p.dob?'DOB: '+p.dob+' &middot; ':'')+''+(p.phone||'')+' &middot; '+(p.email||'')+'</div>'+(p.membership&&p.membership!=='None'?'<span style="display:inline-block;margin-top:6px;padding:3px 10px;background:var(--gold-pale);color:#92400E;border-radius:3px;font-size:11px;font-weight:600;">'+p.membership+'</span>':'')+(p.notes?'<div style="margin-top:8px;font-size:12px;color:var(--warm-gray);">Notes: '+p.notes+'</div>':'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="ph-action-btn ph-btn-primary" onclick="phShowAddVisit()">+ Log Visit</button><button class="ph-action-btn ph-btn-outline" onclick="phDeletePatient(\''+p.id+'\')">Delete</button></div></div></div><div class="section"><div class="section-title">Visit History</div>'+(visits.length===0?'<div class="ph-empty" style="padding:24px 0;">No visits logged yet.</div>':'<table class="ph-visit-table"><thead><tr><th>Date</th><th>Treatments</th><th>Products</th><th>Injector</th><th>Total</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table>')+'</div>';
+  const rows=visits.map(function(v){return '<tr><td style="white-space:nowrap;font-weight:600;">'+v.visitDate+'</td><td>'+(v.treatments||'&mdash;')+'</td><td style="color:var(--warm-gray);font-size:12px;">'+(v.products||'&mdash;')+'</td><td>'+injPill(v.injector||'Anna')+'</td><td style="font-weight:600;white-space:nowrap;">$'+parseFloat(v.total||0).toLocaleString()+'</td><td style="font-size:12px;color:var(--warm-gray);">'+(v.notes||'&mdash;')+'</td><td><button class="ph-action-btn ph-btn-outline" style="padding:4px 10px;font-size:10px;" onclick="phOpenEditVisit(\''+v.id+'\')">Edit</button></td></tr>';}).join('');
+  document.getElementById('ph-detail-body').innerHTML='<div class="section" style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;"><div><div class="section-title">'+p.fname+' '+p.lname+'</div><div class="section-sub" style="margin-bottom:0;">'+(p.dob?'DOB: '+p.dob+' &middot; ':'')+''+(p.phone||'')+' &middot; '+(p.email||'')+'</div>'+(p.membership&&p.membership!=='None'?'<span style="display:inline-block;margin-top:6px;padding:3px 10px;background:var(--gold-pale);color:#92400E;border-radius:3px;font-size:11px;font-weight:600;">'+p.membership+'</span>':'')+(p.notes?'<div style="margin-top:8px;font-size:12px;color:var(--warm-gray);">Notes: '+p.notes+'</div>':'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="ph-action-btn ph-btn-primary" onclick="phShowAddVisit()">+ Log Visit</button><button class="ph-action-btn ph-btn-outline" onclick="phOpenEditPatient(\''+p.id+'\')">Edit</button><button class="ph-action-btn ph-btn-outline" onclick="phDeletePatient(\''+p.id+'\')">Delete</button></div></div></div><div class="section"><div class="section-title">Visit History</div>'+(visits.length===0?'<div class="ph-empty" style="padding:24px 0;">No visits logged yet.</div>':'<table class="ph-visit-table"><thead><tr><th>Date</th><th>Treatments</th><th>Products</th><th>Injector</th><th>Total</th><th>Notes</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>')+'</div>';
 }
 
 function phFuzzyMatches(fname,lname,phone){
@@ -1505,6 +1521,175 @@ function phDeletePatient(id){
 
 async function phSyncPatientToSheet(p){try{await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'Patients',values:[[p.id,p.fname,p.lname,p.dob,p.phone,p.email,p.membership,p.notes,p.createdAt]]})});}catch(e){}}
 async function phSyncVisitToSheet(v){try{await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'Visits',values:[[v.id,v.patientId,v.visitDate,v.treatments,v.products,v.injector,v.total,v.payment,v.notes,v.createdAt]]})});}catch(e){}}
+
+// ── SYNC FROM SHEET (pull other devices' data) ────────────────────────────────
+async function phSyncFromSheet(manual){
+  const ind=document.getElementById('ph-sync-indicator');
+  if(ind)ind.textContent=manual?'Syncing…':'Checking for updates…';
+  try{
+    const [pr,vr]=await Promise.all([
+      fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Patients!A:I'})}),
+      fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Visits!A:J'})})
+    ]);
+    const pd=await pr.json();const vd=await vr.json();
+    let added=0;
+    if(pd.ok&&pd.result&&pd.result.values){
+      const existing=phGetPatients();const ids=new Set(existing.map(function(p){return p.id;}));
+      const toAdd=[];
+      for(const row of pd.result.values){
+        if(!row[0]||ids.has(row[0]))continue;
+        toAdd.push({id:row[0],fname:row[1]||'',lname:row[2]||'',dob:row[3]||'',phone:row[4]||'',email:row[5]||'',membership:row[6]||'None',notes:row[7]||'',createdAt:row[8]||''});
+        added++;
+      }
+      if(toAdd.length)phSavePatients(existing.concat(toAdd));
+    }
+    if(vd.ok&&vd.result&&vd.result.values){
+      const existing=phGetVisits();const ids=new Set(existing.map(function(v){return v.id;}));
+      const toAdd=[];
+      for(const row of vd.result.values){
+        if(!row[0]||ids.has(row[0]))continue;
+        toAdd.push({id:row[0],patientId:row[1]||'',visitDate:row[2]||'',treatments:row[3]||'',products:row[4]||'',injector:row[5]||'Anna',total:row[6]||0,payment:row[7]||'',notes:row[8]||'',createdAt:row[9]||''});
+        added++;
+      }
+      if(toAdd.length)phSaveVisits(existing.concat(toAdd));
+    }
+    if(ind)ind.textContent=added?('+'+added+' new records'):'Up to date ✓';
+    setTimeout(function(){if(ind)ind.textContent='';},3000);
+    phRenderList();
+  }catch(e){
+    if(ind)ind.textContent='Sync failed';
+    setTimeout(function(){if(ind)ind.textContent='';},3000);
+  }
+}
+
+// ── EDIT PATIENT ──────────────────────────────────────────────────────────────
+let phEditingPatientId=null,phEditingVisitId=null;
+
+function phOpenEditPatient(id){
+  const p=phGetPatients().find(function(x){return x.id===id;});
+  if(!p)return;
+  phEditingPatientId=id;
+  document.getElementById('phf-modal-title').textContent='Edit Patient';
+  document.getElementById('phf-save-btn').textContent='Update Patient';
+  document.getElementById('phf-save-btn').onclick=phUpdatePatient;
+  document.getElementById('phf-fname').value=p.fname;
+  document.getElementById('phf-lname').value=p.lname||'';
+  document.getElementById('phf-dob').value=p.dob||'';
+  document.getElementById('phf-phone').value=p.phone||'';
+  document.getElementById('phf-email').value=p.email||'';
+  document.getElementById('phf-membership').value=p.membership||'None';
+  document.getElementById('phf-notes').value=p.notes||'';
+  document.getElementById('ph-modal-patient').style.display='flex';
+}
+
+function phUpdatePatient(){
+  const id=phEditingPatientId;if(!id)return;
+  const patients=phGetPatients();
+  const idx=patients.findIndex(function(p){return p.id===id;});
+  if(idx===-1)return;
+  patients[idx].fname=document.getElementById('phf-fname').value.trim();
+  patients[idx].lname=document.getElementById('phf-lname').value.trim();
+  patients[idx].dob=document.getElementById('phf-dob').value;
+  patients[idx].phone=document.getElementById('phf-phone').value.trim();
+  patients[idx].email=document.getElementById('phf-email').value.trim();
+  patients[idx].membership=document.getElementById('phf-membership').value;
+  patients[idx].notes=document.getElementById('phf-notes').value.trim();
+  phSavePatients(patients);
+  phSyncPatientToSheet(patients[idx]);
+  document.getElementById('ph-modal-patient').style.display='none';
+  phEditingPatientId=null;
+  // Reset modal back to Add mode
+  document.getElementById('phf-modal-title').textContent='New Patient';
+  document.getElementById('phf-save-btn').textContent='Save Patient';
+  document.getElementById('phf-save-btn').onclick=phSavePatient;
+  phRenderDetail(id);
+}
+
+// ── EDIT VISIT ────────────────────────────────────────────────────────────────
+function phOpenEditVisit(id){
+  const v=phGetVisits().find(function(x){return x.id===id;});
+  if(!v)return;
+  phEditingVisitId=id;
+  document.getElementById('phv-modal-title').textContent='Edit Visit';
+  document.getElementById('phv-save-btn').textContent='Update Visit';
+  document.getElementById('phv-save-btn').onclick=phUpdateVisit;
+  document.getElementById('phv-date').value=v.visitDate||'';
+  document.getElementById('phv-injector').value=v.injector||'Anna';
+  document.getElementById('phv-treatments').value=v.treatments||'';
+  document.getElementById('phv-products').value=v.products||'';
+  document.getElementById('phv-total').value=v.total||'';
+  document.getElementById('phv-payment').value=v.payment||'Card';
+  document.getElementById('phv-notes').value=v.notes||'';
+  document.getElementById('ph-modal-visit').style.display='flex';
+}
+
+function phUpdateVisit(){
+  const id=phEditingVisitId;if(!id)return;
+  const visits=phGetVisits();
+  const idx=visits.findIndex(function(v){return v.id===id;});
+  if(idx===-1)return;
+  visits[idx].visitDate=document.getElementById('phv-date').value;
+  visits[idx].injector=document.getElementById('phv-injector').value;
+  visits[idx].treatments=document.getElementById('phv-treatments').value.trim();
+  visits[idx].products=document.getElementById('phv-products').value.trim();
+  visits[idx].total=document.getElementById('phv-total').value;
+  visits[idx].payment=document.getElementById('phv-payment').value;
+  visits[idx].notes=document.getElementById('phv-notes').value.trim();
+  phSaveVisits(visits);
+  document.getElementById('ph-modal-visit').style.display='none';
+  phEditingVisitId=null;
+  // Reset to Add mode
+  document.getElementById('phv-modal-title').textContent='Log Visit';
+  document.getElementById('phv-save-btn').textContent='Save Visit';
+  document.getElementById('phv-save-btn').onclick=phSaveVisit;
+  phRenderDetail(phCurrentPatientId);
+}
+
+// ── TREATMENT PLAN ↔ PATIENT LINK ────────────────────────────────────────────
+let ptPlanLinkedId=null;
+
+function ptPlanSearch(){
+  const q=(document.getElementById('p-pt-search').value||'').toLowerCase().trim();
+  const res=document.getElementById('p-pt-results');
+  if(!q){res.innerHTML='';return;}
+  const matches=phGetPatients().filter(function(p){
+    return (p.fname+' '+p.lname+' '+(p.phone||'')).toLowerCase().includes(q);
+  }).slice(0,5);
+  if(!matches.length){res.innerHTML='<div style="font-size:12px;color:var(--warm-gray);padding:4px;">No patients found</div>';return;}
+  res.innerHTML=matches.map(function(p){
+    const vc=phGetVisits().filter(function(v){return v.patientId===p.id;}).length;
+    return '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="ptPlanSelectPatient(\''+p.id+'\')">'
+      +'<div><div style="font-weight:600;font-size:14px;color:var(--plum);">'+p.fname+' '+p.lname+'</div>'
+      +'<div style="font-size:11px;color:var(--warm-gray);">'+(p.dob||'')+(p.membership&&p.membership!=='None'?' · '+p.membership:'')+'</div></div>'
+      +'<span style="font-size:11px;color:var(--mauve);">'+vc+' visit'+(vc!==1?'s':'')+'</span></div>';
+  }).join('');
+}
+
+function ptPlanSelectPatient(id){
+  const p=phGetPatients().find(function(x){return x.id===id;});
+  if(!p)return;
+  ptPlanLinkedId=id;
+  document.getElementById('p-pt-results').innerHTML='';
+  document.getElementById('p-pt-search').value='';
+  document.getElementById('p-pt-loaded').style.display='';
+  document.getElementById('p-pt-loaded').textContent='Linked: '+p.fname+' '+p.lname+(p.membership&&p.membership!=='None'?' ('+p.membership+')':'');
+  // Pre-fill form fields from patient record
+  document.getElementById('p-fname').value=p.fname;
+  if(p.membership&&p.membership!=='None'){
+    const ms=document.getElementById('p-membership');
+    for(let i=0;i<ms.options.length;i++){if(ms.options[i].value===p.membership){ms.selectedIndex=i;break;}}
+  }
+}
+
+function ptPlanSaveToPatient(){
+  if(!ptPlanLinkedId){alert('No patient linked. Search and select a patient in Step 1 first.');return;}
+  const planText=document.getElementById('p-planout').innerText||'';
+  if(!planText.trim()){alert('No plan to save yet.');return;}
+  const visits=phGetVisits();
+  const v={id:phUID(),patientId:ptPlanLinkedId,visitDate:new Date().toISOString().split('T')[0],treatments:'Treatment Plan: '+planText.slice(0,200)+'…',products:'',injector:document.getElementById('p-injector')?document.getElementById('p-injector').value:'Anna',total:0,payment:'',notes:'Plan generated by Consult IQ Pro',createdAt:new Date().toISOString()};
+  visits.push(v);phSaveVisits(visits);phSyncVisitToSheet(v);
+  document.getElementById('p-save-patient-row').innerHTML='<div style="padding:10px 14px;background:var(--gold-pale);border-radius:8px;font-size:13px;color:var(--amber);font-weight:600;">✓ Plan saved to patient record</div>';
+}
 
 function phHandleCSV(input){
   const file=input.files[0];if(!file)return;
@@ -1657,7 +1842,7 @@ async function lqLogToSheet(reply) {
 
 function getLQSystem() {
   const pr = getPricingText();
-  return 'You are the in-room Lead Qualifier for Dr. V Medical Aesthetics (Pensacola FL). Staff enters a lead name, service interest, and any known context. You apply full practice knowledge to return a structured qualification decision.\n\nPRACTICE RULES:\n- Provider (Anna NP): Thu & Fri only, 11am-8pm. New aesthetic leads go here.\n- Dr. V (MD): Established patients only. Wellness/hormone. Bloom & Rise.\n- Consult: $100, credited toward same-day treatment.\n- $25 booking fee for non-members (auto-collected, credited same-day).\n- Booking portal: https://api.leadconnectorhq.com/widget/bookings/anna-crisco-personal-calendar-yuabbvabw\n\nCURRENT PRICING (use these exact numbers — updated by practice admin):\n'+pr+'\n\nNEUROTOXIN:\n- Brands: Dysport, Xeomin. NEVER say Botox.\n- Quote tox by area from CURRENT PRICING above (never per-unit to non-members).\n- Bank Your Botox: $120/mo, 10 units at $12/unit.\n\nFILLER:\n- Brands: Restylane line. NEVER say Juvederm.\n- Quote per-area prices from CURRENT PRICING above.\n- LIP FILLER PRESCREENING (in-room): cold sore/HSV history (Valtrex needed); blood thinners (flag provider); 3 lip photos needed; prior filler history; chin/jaw goals = price higher.\n- P-Shot: $1950 provider / $2100 Dr. V. O-Shot: $1300 provider / $1400 Dr. V.\n\nLASER HAIR REMOVAL:\n- Diode 810nm. Screen hair color first.\n- NOT A CANDIDATE: white, gray, red, blonde hair.\n- CANDIDATE: brown or black hair.\n- Sun/spray tan past 3-4 weeks = wait. Pregnant = wait. Accutane past 6 months = wait. PCOS = still works.\n- Pricing (3-session/8-session): Upper Lip $399/$975; Underarms/Bikini/Chin/Neck $475/$1150; Full Face $599/$1475; Lower Arms $675/$1650; Brazilian/Chest $945/$2295; Full Back/Full Legs $1075/$2625.\n\nTATTOO REMOVAL:\n- Q-Switch. No consult for XS/S/M/L. XL = consult.\n- Must be 12+ weeks old. Per session (black/color): XS $125/$150; S $175/$200; M $250/$300; L $375/$450.\n\nIPL:\n- NEVER say patient is a candidate or cleared. Provider makes final call.\n- GREEN: fair skin FST I-III, no recent sun, spots/redness concerns.\n- YELLOW: medium-tan skin, recent sun, melasma, photosensitizing meds, cold sore history, active acne.\n- RED: pregnant, active tan, on Accutane, open lesions, keloid history, lupus, changing mole.\n- Series (6 sessions + ZO kit): Full Face $2325; Face+Neck $3135; Face+Neck+Chest $3945. Maintenance: Full Face $175; Face+Neck $275.\n\nCO2 LASER: use price from CURRENT PRICING above. ZO prep kit included. Sticker-shock qualify. 6-8 weeks ZO preconditioning.\n\nBLOOM & RISE:\n- Bloom (female): O-Shot + PRF + Xeomin = $2100. Provider and Dr. V.\n- Rise (male): P-Shot + PRF + Xeomin = $2500. Provider and Dr. V.\n- $100 consult, credited. NEVER say just an O-Shot.\n\nVAMPIRE BREAST LIFT: $1949 single / $3649 x2. Sticker-shock. NEVER say: adds volume, increases cup size.\n\nIV THERAPY: First visit $100 consult (credited). Myers $175, High-C $200, NAD+ $400-600, Hydration $125.\nVITAMIN INJECTIONS (no consult): B12 $35, Lipo-C $45, Glutathione IM $75, Vit D $40.\nWEIGHT LOSS: $100 consult credited. Semaglutide/Tirzepatide.\nHORMONE CONSULT: $350 NOT credited. Dr. V only. Prescreening required before booking.\nGENEO FACIAL: use price from CURRENT PRICING above. No consult.\nMICRONEEDLING: use price from CURRENT PRICING above.\nRF MICRONEEDLING (Sylfirm): use price from CURRENT PRICING above.\n\nSTICKER-SHOCK (required before quoting >$950): Frame it before the number.\nMEMBERSHIPS: LHR $50 activation, area locked. Tattoo $50 activation, 30-min $250/mo.\nPOST-TREATMENT URGENT (breathing trouble, severe swelling, vision changes, chest pain): ER immediately.\n\nRESPONSE FORMAT:\n- For the FIRST message: return ONLY raw JSON, no code fences, no extra text: {"status":"BOOK NOW|NEEDS CONSULT|FLAG FOR PROVIDER|NOT A CANDIDATE|GET MORE INFO","statusReason":"one sentence","script":"2-4 natural sentences staff says to lead — warm and human, not corporate","priceToQuote":"specific dollar amount or empty string","nextStep":"exact next action for staff","flags":["clinical or sales flags, or empty array"],"membershipPitch":"one-sentence membership angle or empty string"}\n- For follow-up messages: plain conversational text, step-by-step. Use **bold** for the exact words to say. Be direct — staff is mid-conversation with the patient right now.';
+  return 'You are the in-room Lead Qualifier for Dr. V Medical Aesthetics (Pensacola FL). Staff enters a lead name, service interest, and any known context. You apply full practice knowledge to return a structured qualification decision.\n\nPRACTICE RULES:\n- Provider (Anna NP): Thu & Fri only, 11am-8pm. New aesthetic leads go here.\n- Dr. V (MD): Established patients only. Wellness/hormone. Bloom & Rise.\n- Consult: $100, credited toward same-day treatment.\n- $25 booking fee for non-members (auto-collected, credited same-day).\n- Booking portal: https://api.leadconnectorhq.com/widget/bookings/anna-crisco-personal-calendar-yuabbvabw\n\nCURRENT PRICING (use these exact numbers — updated by practice admin):\n'+pr+'\n\nNEUROTOXIN:\n- Brands: Dysport, Xeomin. NEVER say Botox.\n- Quote tox by area from CURRENT PRICING above (never per-unit to non-members).\n- Bank Your Botox: $120/mo, 10 units at $12/unit.\n\nFILLER:\n- Brands: Restylane line. NEVER say Juvederm.\n- Quote per-area prices from CURRENT PRICING above.\n- LIP FILLER PRESCREENING (in-room): cold sore/HSV history (Valtrex needed); blood thinners (flag provider); 3 lip photos needed; prior filler history; chin/jaw goals = price higher.\n- P-Shot: $1950 provider / $2100 Dr. V. O-Shot: $1300 provider / $1400 Dr. V.\n\nLASER HAIR REMOVAL:\n- Diode 810nm. Screen hair color first.\n- NOT A CANDIDATE: white, gray, red, blonde hair.\n- CANDIDATE: brown or black hair.\n- Sun/spray tan past 3-4 weeks = wait. Pregnant = wait. Accutane past 6 months = wait. PCOS = still works.\n- Pricing (3-session/8-session): Upper Lip $399/$975; Underarms/Bikini/Chin/Neck $475/$1150; Full Face $599/$1475; Lower Arms $675/$1650; Brazilian/Chest $945/$2295; Full Back/Full Legs $1075/$2625.\n\nTATTOO REMOVAL:\n- Q-Switch. No consult for XS/S/M/L. XL = consult.\n- Must be 12+ weeks old. Per session (black/color): XS $125/$150; S $175/$200; M $250/$300; L $375/$450.\n\nIPL:\n- NEVER say patient is a candidate or cleared. Provider makes final call.\n- GREEN: fair skin FST I-III, no recent sun, spots/redness concerns.\n- YELLOW: medium-tan skin, recent sun, melasma, photosensitizing meds, cold sore history, active acne.\n- RED: pregnant, active tan, on Accutane, open lesions, keloid history, lupus, changing mole.\n- Series (6 sessions + ZO kit): Full Face $2325; Face+Neck $3135; Face+Neck+Chest $3945. Maintenance: Full Face $175; Face+Neck $275.\n\nCO2 LASER: use price from CURRENT PRICING above. ZO prep kit included. Sticker-shock qualify. 6-8 weeks ZO preconditioning.\n\nBLOOM & RISE:\n- Bloom (female): O-Shot + PRF + Xeomin = $2100. Provider and Dr. V.\n- Rise (male): P-Shot + PRF + Xeomin = $2500. Provider and Dr. V.\n- $100 consult, credited. NEVER say just an O-Shot.\n\nVAMPIRE BREAST LIFT: $1949 single / $3649 x2. Sticker-shock. NEVER say: adds volume, increases cup size.\n\nIV THERAPY: First visit $100 consult (credited). Use prices from CURRENT PRICING above for all IV drips and vitamin injections — no consult needed for B12, Vitamin D, Skinny Shot.\nWEIGHT LOSS: $100 consult credited. Semaglutide/Tirzepatide.\nHORMONE CONSULT: $350 NOT credited. Dr. V only. Prescreening required before booking.\nGENEO FACIAL: use price from CURRENT PRICING above. No consult.\nMICRONEEDLING: use price from CURRENT PRICING above.\nRF MICRONEEDLING (Sylfirm): use price from CURRENT PRICING above.\n\nSTICKER-SHOCK (required before quoting >$950): Frame it before the number.\nMEMBERSHIPS: LHR $50 activation, area locked. Tattoo $50 activation, 30-min $250/mo.\nPOST-TREATMENT URGENT (breathing trouble, severe swelling, vision changes, chest pain): ER immediately.\n\nRESPONSE FORMAT:\n- For the FIRST message: return ONLY raw JSON, no code fences, no extra text: {"status":"BOOK NOW|NEEDS CONSULT|FLAG FOR PROVIDER|NOT A CANDIDATE|GET MORE INFO","statusReason":"one sentence","script":"2-4 natural sentences staff says to lead — warm and human, not corporate","priceToQuote":"specific dollar amount or empty string","nextStep":"exact next action for staff","flags":["clinical or sales flags, or empty array"],"membershipPitch":"one-sentence membership angle or empty string"}\n- For follow-up messages: plain conversational text, step-by-step. Use **bold** for the exact words to say. Be direct — staff is mid-conversation with the patient right now.';
 }
 
 
