@@ -1181,10 +1181,18 @@ Pay-in-full (10% off): $X
 Start today (Phase 1): $X
 
 ## Consult script
-[2-3 sentences the provider says]
+[2-3 sentences the provider says at the start of the consult]
 
 ## Top objections
-[2-3 objections with reframes]`;
+[2-3 most likely objections with honest, non-pushy reframes]
+
+## In-room upsell
+RULES — only include this section if there is a genuine clinical reason based on the patient's stated concerns, flags, or what they are already getting today. Do NOT fabricate a need. If nothing fits, write "None today — plan is complete for this visit."
+If there IS a real opportunity, write ONE add-on maximum using this format:
+Add-on: [service name] — $[price]
+Why it fits: [one sentence grounded in their concern or today's treatment, e.g. "Patient is getting lip filler — lip flip complements by relaxing the upper lip curl she mentioned"]
+Say this: "[exact words the injector says naturally mid-treatment, first person, warm and conversational — no sales language]"`;
+
 
   const msg = `Patient: ${p.name}, ${p.age}yo, ${p.fst}
 Membership: ${p.membership} | Skincare: ${p.skincare}
@@ -1194,14 +1202,34 @@ Notes: ${p.notes}
 Build the full phased plan.`;
 
   try {
-    const res = await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:sys,messages:[{role:'user',content:msg}]})});
+    const res = await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1400,system:sys,messages:[{role:'user',content:msg}]})});
     const data = await res.json();
     planText = data.content?.[0]?.text || 'Error generating plan.';
     const totals = extractTotals(planText);
+
+    // Clinical flags
     const flagMatch = planText.match(/## Clinical flags\n([\s\S]*?)(?=##)/);
     if (flagMatch && flagMatch[1].trim()) {
       document.getElementById('p-flagbox').innerHTML = `<div class="warning-box"><div class="warning-title">⚠ Clinical Flags</div><div class="warning-text">${flagMatch[1].trim().replace(/\n/g,'<br>')}</div></div>`;
     }
+
+    // In-room upsell — extract before general render
+    const upsellMatch = planText.match(/## In-room upsell\n([\s\S]*?)(?=##|$)/);
+    const upsellEl = document.getElementById('upsell-script');
+    if (upsellEl && upsellMatch) {
+      const upsellText = upsellMatch[1].trim();
+      if (upsellText && !upsellText.toLowerCase().startsWith('none')) {
+        const addon   = upsellText.match(/Add-on:\s*(.+)/)?.[1]?.trim() || '';
+        const why     = upsellText.match(/Why it fits:\s*(.+)/)?.[1]?.trim() || '';
+        const sayThis = upsellText.match(/Say this:\s*"?([^"]+)"?/)?.[1]?.trim() || '';
+        upsellEl.innerHTML = (addon ? `<div style="font-weight:700;font-size:13px;color:var(--plum);margin-bottom:4px;">${addon}</div>` : '')
+          + (why ? `<div style="font-size:12px;color:var(--warm-gray);margin-bottom:10px;">Why it fits: ${why}</div>` : '')
+          + (sayThis ? `<div class="script-box">"${sayThis}"<div class="script-note">Say this naturally mid-treatment — warm, not salesy.</div></div>` : '');
+      } else {
+        upsellEl.innerHTML = `<div style="font-size:13px;color:var(--warm-gray);font-style:italic;">No add-on needed — plan is complete for this visit.</div>`;
+      }
+    }
+
     document.getElementById('p-planout').innerHTML = renderPlanSections(planText);
     document.getElementById('p-save-patient-row').style.display = ptPlanLinkedId ? '' : 'none';
     logPlanToSheet(p, totals);
