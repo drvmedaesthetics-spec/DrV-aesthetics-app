@@ -1098,7 +1098,16 @@ async function tuSyncToSheet() {
 }
 
 // ─── OWNER DASHBOARD ──────────────────────────────────────
-function ownerGetPin(){ return localStorage.getItem('drv_owner_pin') || '2580'; }
+function ownerGetPin(){ return localStorage.getItem('drv_owner_pin') || '0506'; }
+function ownerSeedDefaults(){
+  if(!localStorage.getItem('drv_owner_pin')) localStorage.setItem('drv_owner_pin','0506');
+  if(!localStorage.getItem('drv_injector_pins')){
+    localStorage.setItem('drv_injector_pins', JSON.stringify({Anna:'1560'}));
+  } else {
+    try { const p=JSON.parse(localStorage.getItem('drv_injector_pins')); if(!p.Anna){p.Anna='1560';localStorage.setItem('drv_injector_pins',JSON.stringify(p));} } catch(e){}
+  }
+}
+ownerSeedDefaults();
 function ownerJSON(key){ try { return JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){ return {}; } }
 let _ownerUnlocked = false;
 
@@ -1258,7 +1267,15 @@ function ownerRenderDash() {
   const hours = ownerJSON('drv_injector_hours');
   const goals = ownerJSON('drv_injector_goals');
   Object.keys(pins).concat(Object.keys(hours)).concat(Object.keys(goals)).forEach(function(n){ if(provNames.indexOf(n)<0)provNames.push(n); });
+  // PIN reminder card
+  const allPins = ownerJSON('drv_injector_pins');
+  let pinReminder = '<div style="background:var(--gold-pale);border:1px solid var(--gold);border-radius:10px;padding:12px 16px;margin-bottom:16px;">'
+    + '<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:8px;">&#x1F511; PIN Reference (visible to owner only)</div>'
+    + '<div style="font-size:13px;color:var(--cocoa);"><strong>Owner (Dr. V):</strong> '+ownerGetPin()+'</div>';
+  Object.keys(allPins).forEach(function(n){ pinReminder += '<div style="font-size:13px;color:var(--cocoa);"><strong>'+n+':</strong> '+allPins[n]+'</div>'; });
+  pinReminder += '</div>';
   html += '<div class="section"><div class="section-title">Owner Settings</div><div class="section-sub">Set per-injector PINs, estimated hours this month, and bonus goals.</div>';
+  html += pinReminder;
   html += '<div class="form-group" style="margin-bottom:14px;"><label>Owner PIN</label><input id="owner-set-pin" value="'+ownerGetPin()+'" style="max-width:160px;"/></div>';
   html += '<table class="ph-visit-table"><thead><tr><th>Injector</th><th>PIN</th><th>Hours (mo)</th><th>Bonus Goal $</th></tr></thead><tbody>';
   provNames.forEach(function(n){
