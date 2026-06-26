@@ -23,9 +23,9 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
 .badge{background:linear-gradient(135deg,var(--mauved),var(--plum));color:var(--gold-light);font-size:10px;padding:4px 12px;border-radius:20px;letter-spacing:1px;font-weight:700;}
 
 /* MODE SWITCHER */
-.mode-bar{background:var(--white);border-bottom:1px solid var(--border);}
-.mode-inner{max-width:1060px;margin:0 auto;display:flex;}
-.mode-btn{padding:12px 24px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:var(--warm-gray);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;font-family:'Lato',sans-serif;background:none;border-top:none;border-left:none;border-right:none;}
+.mode-bar{background:var(--white);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.mode-inner{max-width:1060px;margin:0 auto;display:flex;flex-wrap:nowrap;min-width:max-content;}
+.mode-btn{padding:12px 18px;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:700;color:var(--warm-gray);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;font-family:'Lato',sans-serif;background:none;border-top:none;border-left:none;border-right:none;white-space:nowrap;}
 .mode-btn:hover{color:var(--mauve);}
 .mode-btn.active{color:var(--plum);border-bottom-color:var(--gold);}
 
@@ -838,12 +838,27 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
 <div id="mode-huddle" class="mode-panel">
   <div class="section" style="margin-bottom:14px;">
     <div class="section-title">Weekly Huddle</div>
-    <div class="section-sub">Pull appointments from GHL, prep your team, then update patient records the following week.</div>
-    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-      <button class="ph-action-btn ph-btn-primary" id="huddle-this-btn" onclick="huddleLoad('this')" style="padding:10px 20px;">&#x1F4C5; Pull This Week</button>
-      <button class="ph-action-btn ph-btn-outline" id="huddle-last-btn" onclick="huddleLoad('last')" style="padding:10px 20px;">&#x2705; Last Week — Update DB</button>
-      <button class="ph-action-btn ph-btn-outline" onclick="huddleCopy()" style="padding:10px 20px;">&#x1F4CB; Copy Huddle</button>
+    <div class="section-sub">Upload your AR_Invoices CSV from Aesthetic Record to prep the team. Use "This Week" for Tuesday huddle prep, "Last Week" to update patient records.</div>
+    <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;align-items:flex-start;">
+      <div style="flex:1;min-width:220px;">
+        <label style="display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--warm-gray);margin-bottom:6px;font-weight:700;">This Week — Huddle Prep</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label class="ph-action-btn ph-btn-primary" style="padding:10px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+            &#x1F4C2; Upload CSV
+            <input type="file" accept=".csv" style="display:none;" onchange="huddleLoadCSV(event,'this')">
+          </label>
+          <button class="ph-action-btn ph-btn-outline" onclick="huddleCopy()" style="padding:10px 16px;">&#x1F4CB; Copy</button>
+        </div>
+      </div>
+      <div style="flex:1;min-width:220px;">
+        <label style="display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--warm-gray);margin-bottom:6px;font-weight:700;">Last Week — Update Patient DB</label>
+        <label class="ph-action-btn ph-btn-outline" style="padding:10px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+          &#x2705; Upload & Update DB
+          <input type="file" accept=".csv" style="display:none;" onchange="huddleLoadCSV(event,'last')">
+        </label>
+      </div>
     </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--warm-gray);">Export from AR: Reports → Invoices → filter by date range → Download CSV</div>
   </div>
   <div id="huddle-status" style="font-size:12px;color:var(--warm-gray);font-style:italic;margin-bottom:10px;"></div>
   <div id="huddle-body"></div>
@@ -2010,7 +2025,8 @@ let huddleAppts = [];
 
 function huddleInit() {
   if (!huddleAppts.length) {
-    document.getElementById('huddle-body').innerHTML = '<div class="ph-empty">Click "Pull This Week" to load appointments from GHL.</div>';
+    document.getElementById('huddle-status').textContent = '';
+    document.getElementById('huddle-body').innerHTML = '<div class="ph-empty">Upload your AR_Invoices CSV to get started. Export from Aesthetic Record: Reports → Invoices → Download CSV.</div>';
   }
 }
 
@@ -2028,27 +2044,118 @@ function huddleWeekRange(offset) {
   return { start: mon.toISOString(), end: sun.toISOString(), label: mon.toLocaleDateString('en-US', {month:'short',day:'numeric'}) + ' – ' + sun.toLocaleDateString('en-US', {month:'short',day:'numeric'}) };
 }
 
-async function huddleLoad(which) {
+function huddleLoadCSV(event, which) {
+  const file = event.target.files[0];
+  if (!file) return;
   const status = document.getElementById('huddle-status');
   const body = document.getElementById('huddle-body');
-  const offset = which === 'last' ? -1 : 0;
-  const range = huddleWeekRange(offset);
-  status.textContent = '⟳ Loading appointments ' + range.label + '...';
+  status.textContent = '⟳ Reading ' + file.name + '...';
   body.innerHTML = '';
-  try {
-    const r = await fetch('/api/ghl', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'appointments', startTime: range.start, endTime: range.end })
-    });
-    const data = await r.json();
-    const events = data.events || data.appointments || data.data || [];
-    huddleAppts = events;
-    status.textContent = '✓ ' + events.length + ' appointment' + (events.length !== 1 ? 's' : '') + ' for ' + range.label;
-    huddleRender(events, which, range.label);
-  } catch(e) {
-    status.textContent = '✗ Error loading: ' + e.message;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const text = e.target.result;
+      const events = huddleParseARCSV(text);
+      huddleAppts = events;
+      // Determine week label from data dates or fallback to calculated range
+      const offset = which === 'last' ? -1 : 0;
+      const range = huddleWeekRange(offset);
+      const label = events.length
+        ? (function() {
+            const dates = events.map(function(ev) { return ev.startTime; }).sort();
+            const d0 = new Date(dates[0]);
+            const d1 = new Date(dates[dates.length - 1]);
+            return d0.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + d1.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+          })()
+        : range.label;
+      status.textContent = '✓ ' + events.length + ' invoice' + (events.length !== 1 ? 's' : '') + ' from ' + label + ' (' + file.name + ')';
+      huddleRender(events, which, label);
+    } catch(err) {
+      status.textContent = '✗ Could not parse CSV: ' + err.message;
+    }
+    // Reset the input so same file can be re-uploaded
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function huddleParseARCSV(text) {
+  // Split into lines, handle \r\n and \n
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(function(l){ return l.trim(); });
+  if (lines.length < 2) return [];
+
+  // Parse header row — handle quoted fields
+  function parseCSVLine(line) {
+    const result = [];
+    let cur = '';
+    let inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuote && line[i+1] === '"') { cur += '"'; i++; }
+        else inQuote = !inQuote;
+      } else if (ch === ',' && !inQuote) {
+        result.push(cur.trim());
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    result.push(cur.trim());
+    return result;
   }
+
+  const headers = parseCSVLine(lines[0]).map(function(h){ return h.toLowerCase().replace(/[^a-z0-9]/g,''); });
+
+  // Column index helpers — AR exports vary so try multiple names
+  function col(names) {
+    for (let i = 0; i < names.length; i++) {
+      const n = names[i].toLowerCase().replace(/[^a-z0-9]/g,'');
+      const idx = headers.indexOf(n);
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  }
+
+  const iDate     = col(['date','invoicedate','appointment date','appt date','service date']);
+  const iPatient  = col(['patient','patientname','patient name','client','clientname','client name','name']);
+  const iService  = col(['service','services','item','items','description','treatment']);
+  const iAmount   = col(['amount','total','invoice total','price','charge','fee']);
+  const iProvider = col(['provider','injector','staff','np','clinician']);
+  const iTime     = col(['time','appttime','appointment time','appt time','start time']);
+
+  const events = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    if (cols.length < 2) continue;
+
+    const rawDate   = iDate     >= 0 ? cols[iDate]     : '';
+    const rawName   = iPatient  >= 0 ? cols[iPatient]  : '';
+    const rawSvc    = iService  >= 0 ? cols[iService]  : '';
+    const rawAmt    = iAmount   >= 0 ? cols[iAmount]   : '';
+    const rawProv   = iProvider >= 0 ? cols[iProvider] : '';
+    const rawTime   = iTime     >= 0 ? cols[iTime]     : '';
+
+    if (!rawName && !rawDate) continue;
+
+    // Build ISO datetime — combine date + time if available
+    let isoDate = '';
+    if (rawDate) {
+      const cleaned = rawDate.replace(/"/g,'').trim();
+      const d = new Date(cleaned + (rawTime ? ' ' + rawTime.replace(/"/g,'').trim() : ' 09:00'));
+      isoDate = isNaN(d.getTime()) ? new Date(cleaned).toISOString() : d.toISOString();
+    }
+
+    const nameParts = rawName.replace(/"/g,'').trim().split(/\s+/);
+    events.push({
+      startTime: isoDate,
+      contact: { name: rawName.replace(/"/g,'').trim() },
+      notes: rawSvc.replace(/"/g,'').trim(),
+      amount: rawAmt.replace(/[$",]/g,'').trim(),
+      provider: rawProv.replace(/"/g,'').trim()
+    });
+  }
+  return events;
 }
 
 function huddleRender(events, which, rangeLabel) {
@@ -2083,8 +2190,10 @@ function huddleRender(events, which, rangeLabel) {
 
     byDay[day].forEach(function(e) {
       const name = (e.contact && (e.contact.name || e.contact.firstName + ' ' + (e.contact.lastName||''))) || e.title || 'Unknown';
-      const time = new Date(e.startTime || e.start || '').toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+      const dt = new Date(e.startTime || e.start || '');
+      const time = isNaN(dt.getTime()) ? '' : dt.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
       const service = e.notes || e.appointmentStatus || e.calendarId || '';
+      const amtStr = e.amount ? ' &nbsp;<span style="font-size:11px;color:var(--green);font-weight:700;">$' + parseFloat(e.amount).toLocaleString() + '</span>' : '';
       const contactId = e.contactId || (e.contact && e.contact.id) || '';
 
       // Try to match to patient DB
@@ -2111,7 +2220,7 @@ function huddleRender(events, which, rangeLabel) {
 
       html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
         + '<div>'
-        + '<div style="font-weight:600;font-size:14px;color:var(--cocoa);">' + time + ' &nbsp;·&nbsp; ' + name + memberBadge + '</div>'
+        + '<div style="font-weight:600;font-size:14px;color:var(--cocoa);">' + (time ? time + ' &nbsp;·&nbsp; ' : '') + name + memberBadge + amtStr + '</div>'
         + (service ? '<div style="font-size:12px;color:var(--mauve);margin-top:2px;">' + service + '</div>' : '')
         + '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px;">' + lastVisit + '</div>'
         + '</div>'
