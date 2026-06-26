@@ -1445,6 +1445,15 @@ function ownerRenderCard(name) {
   const goal = parseFloat(goals[name]) || 0;
   const prog = goal ? Math.min(100,Math.round(revenue/goal*100)) : 0;
 
+  // Quarterly bonus tiers based on RPH (for 1-2 year employees)
+  const BONUS_TIERS = [
+    { min:900, label:'Tier 3', bonus:1000, color:'var(--gold)' },
+    { min:800, label:'Tier 2', bonus:550,  color:'var(--mauve)' },
+    { min:600, label:'Tier 1', bonus:350,  color:'var(--blue)' },
+  ];
+  const earnedTier = rph ? BONUS_TIERS.find(function(t){ return rph >= t.min; }) : null;
+  const nextTier = rph ? BONUS_TIERS.slice().reverse().find(function(t){ return rph < t.min; }) : BONUS_TIERS[BONUS_TIERS.length-1];
+
   function stat(label,val,sub,color){ return '<div style="background:var(--cream);border-radius:8px;padding:10px 14px;text-align:center;">'
     +'<div style="font-size:10px;color:var(--mauve);text-transform:uppercase;letter-spacing:.05em;font-weight:600;">'+label+'</div>'
     +'<div style="font-size:18px;font-weight:700;color:'+(color||'var(--plum)')+';font-family:\'Cormorant Garamond\',serif;margin-top:3px;">'+val+'</div>'
@@ -1462,12 +1471,24 @@ function ownerRenderCard(name) {
     +stat('Profit After Labor', (rate&&hrs)?fmt(profitAfterLabor):'—', 'rev − labor', profitAfterLabor>0?'var(--green)':'var(--red)')
     +'</div>';
 
-  // Bonus goal progress bar
-  html += '<div style="margin:16px 0 8px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">'
-    +'<span style="font-weight:600;color:var(--plum);">Bonus Goal</span>'
-    +'<span style="font-weight:700;">'+(goal ? fmt(revenue)+' / '+fmt(goal)+' ('+prog+'%)' : 'no goal set — add in Owner Settings')+'</span></div>'
-    +(goal?'<div style="background:var(--cream);border-radius:8px;height:20px;overflow:hidden;"><div style="width:'+prog+'%;height:100%;background:linear-gradient(135deg,var(--gold),var(--gold-light));transition:width .4s;"></div></div>'
-      +'<div style="font-size:11px;color:var(--warm-gray);margin-top:4px;">'+(prog>=100?'&#x1F3AF; Goal reached!':'$'+Math.max(0,Math.round(goal-revenue)).toLocaleString()+' to go')+'</div>':'')
+  // Quarterly bonus tier card
+  html += '<div style="margin:16px 0;border:2px solid '+(earnedTier?earnedTier.color:'var(--border)')+';border-radius:10px;padding:14px 16px;">'
+    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mauve);margin-bottom:10px;">Quarterly Bonus — RPH Tiers</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">'
+    +BONUS_TIERS.slice().reverse().map(function(t){
+      const active = earnedTier && earnedTier.label===t.label;
+      return '<div style="border-radius:8px;padding:10px;text-align:center;background:'+(active?t.color:'var(--cream)')+';border:2px solid '+(active?t.color:'var(--border)')+';">'
+        +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:'+(active?'#fff':t.color)+';">'+t.label+'</div>'
+        +'<div style="font-size:11px;color:'+(active?'rgba(255,255,255,.8)':'var(--warm-gray)')+';">RPH ≥ $'+t.min+'</div>'
+        +'<div style="font-size:16px;font-weight:700;color:'+(active?'#fff':t.color)+';font-family:\'Cormorant Garamond\',serif;">+'+fmt(t.bonus)+'/qtr</div>'
+        +(active?'<div style="font-size:9px;color:rgba(255,255,255,.9);margin-top:2px;">&#x2713; CURRENT</div>':'')
+        +'</div>';
+    }).join('')
+    +'</div>'
+    +(rph && !earnedTier ? '<div style="font-size:12px;color:var(--red);">Current RPH: '+fmt(rph)+'/hr — below Tier 1 ($600/hr minimum). No bonus this quarter.</div>' : '')
+    +(rph && earnedTier ? '<div style="font-size:13px;color:var(--cocoa);">Current RPH: <strong style="color:'+earnedTier.color+';">'+fmt(rph)+'/hr</strong> → <strong>'+earnedTier.label+' — '+fmt(earnedTier.bonus)+' bonus this quarter</strong>'
+      +(nextTier?' &nbsp;<span style="font-size:11px;color:var(--warm-gray);">Next tier at $'+nextTier.min+'/hr (+'+fmt(nextTier.bonus-earnedTier.bonus)+' more)</span>':'')+'</div>' : '')
+    +(!rph ? '<div style="font-size:12px;color:var(--warm-gray);">Enter hours and rate to calculate RPH and bonus tier.</div>' : '')
     +'</div>';
 
   // Monthly hours history
