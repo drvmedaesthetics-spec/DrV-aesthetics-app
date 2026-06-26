@@ -2359,6 +2359,9 @@ function huddleRender(events, which, rangeLabel) {
             : '<button class="ph-action-btn ph-btn-outline" style="font-size:10px;padding:4px 10px;" onclick="huddleAddPatient(\''+fn+'\',\''+ln+'\')">+ Add to DB</button>')
         : (matched ? '<button class="ph-action-btn ph-btn-outline" style="font-size:10px;padding:4px 10px;" onclick="phShowDetail(\''+matched.id+'\');switchMode(\'history\')">View Record</button>' : '');
 
+      // Photo requirements based on service + new patient status
+      const photoNeeds = huddlePhotoNeeds(service, !matched);
+
       // Unique key for consent checkbox — name + date
       const consentKey = 'consent_' + name.replace(/\s+/g,'_') + '_' + (e.startTime||'').split('T')[0];
       const consentChecked = e.consentNeeded ? 'checked' : '';
@@ -2372,6 +2375,7 @@ function huddleRender(events, which, rangeLabel) {
         + '</div>'
         + '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">' + logBtn + '</div>'
         + '</div>'
+        + (photoNeeds.length ? '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">' + photoNeeds.map(function(p){ return '<span style="font-size:11px;background:#F0EBF6;color:#5C3D8F;border-radius:4px;padding:2px 8px;font-weight:600;">' + p + '</span>'; }).join('') + '</div>' : '')
         + '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">'
         + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--cocoa);user-select:none;">'
         + '<input type="checkbox" id="'+consentKey+'" '+consentChecked+' onchange="huddleConsentToggle(this,\''+consentKey+'\')" style="accent-color:var(--mauve);width:14px;height:14px;">'
@@ -2418,6 +2422,32 @@ async function huddleConsentToggle(checkbox, key) {
   }
 }
 
+function huddlePhotoNeeds(service, isNew) {
+  const s = (service || '').toLowerCase();
+  const needs = [];
+  if (isNew) needs.push('📷 Full set — Camera (new pt)');
+  // Neurotoxin / tox / botox / dysport / xeomin / jeuveau / daxxify
+  const isTox = /neuro|tox|botox|dysport|xeomin|jeuveau|daxxify|wrinkle|forehead|crow|glabella|masseter|nefertiti|platysmal|chin|dao|hyperhidrosis|bunny|gummy|barbie|lip flip/.test(s);
+  // Lip filler specifically
+  const isLipFiller = /lip\s*(filler|augment|volum|plump|enhance)/.test(s) || (s.includes('lip') && (s.includes('fill') || s.includes('ml') || s.includes('syringe')));
+  // Other fillers
+  const isFiller = /filler|voluma|vollure|volbella|juvederm|restylane|sculptra|radiesse|cheek|jaw|chin|temple|tear|nasolabial|marionette|under.?eye|mid.?face|1ml|2ml/.test(s) && !isLipFiller;
+  // Tattoo
+  const isTattoo = /tattoo/.test(s);
+  // Biostimulator / skin treatment
+  const isBioOrSkin = /sculptra|radiesse|prp|exosome|laser|peel|microneed/.test(s);
+
+  if (isTox) needs.push('📱 iPad — Expression photos (tox)');
+  if (isLipFiller) needs.push('📱 iPad — Lip expression photos');
+  if (isFiller || isBioOrSkin) needs.push('📸 Before & After photos');
+  if (isTattoo) needs.push('📸 Tattoo Before photo');
+
+  // If nothing matched but not new, still want before/after for anything injectable
+  if (!needs.length && !isNew && /inject|treatment|service/.test(s)) needs.push('📸 Before & After photos');
+
+  return needs;
+}
+
 async function huddleGenerateBrief() {
   const brief = document.getElementById('huddle-brief');
   if (!brief) return;
@@ -2451,17 +2481,44 @@ async function huddleGenerateBrief() {
 You are preparing the weekly team huddle briefing. Be concise, actionable, and practical.
 Tone: professional but warm. Use bullet points. No fluff.`;
 
-  const prompt = `Today's patient schedule:\n${patientLines}\n\n
+  const photoRules = `Photo rules (apply per service):
+- New patient → Full set on camera
+- Neurotoxin/tox (forehead, crow's feet, masseter, lip flip, etc.) → iPad expression photos
+- Lip filler → iPad lip expression photos
+- All other fillers (cheek, jawline, tear trough, nasolabial, etc.) → Before & after photos
+- Biostimulators (Sculptra, Radiesse) → Before & after photos
+- Tattoo → Before photo only`;
+
+  const patientLinesWithPhotos = huddleAppts.map(function(e) {
+    const name = (e.contact && e.contact.name) || 'Unknown';
+    const service = e.notes || '';
+    const aspire = e.aspire && e.aspire !== '0' ? ' | Aspire: ' + e.aspire + ' pts' : '';
+    const consent = e.consentNeeded ? ' | CONSENT NEEDED' : '';
+    const nameParts = name.trim().split(' ');
+    const matched = patients.find(function(p) {
+      return p.fname.toLowerCase() === (nameParts[0]||'').toLowerCase() && (p.lname||'').toLowerCase() === (nameParts.slice(1).join(' ')||'').toLowerCase();
+    });
+    const isNew = !matched;
+    const history = matched ? (function() {
+      const pv = visits.filter(function(v){ return v.patientId === matched.id; }).sort(function(a,b){ return b.visitDate.localeCompare(a.visitDate); });
+      return pv.length ? 'Last visit ' + pv[0].visitDate + ': ' + (pv[0].treatments||'') : 'New patient';
+    })() : 'New patient (not in DB)';
+    const mem = matched && matched.membership && matched.membership !== 'None' ? ' | Member: ' + matched.membership : ' | No membership';
+    const photos = huddlePhotoNeeds(service, isNew).join(', ') || 'standard photos';
+    return '• ' + name + (isNew ? ' [NEW]' : '') + ' — ' + service + aspire + mem + consent + ' | ' + history + ' | Photos: ' + photos;
+  }).join('\n');
+
+  const prompt = `Today's patient schedule:\n${patientLinesWithPhotos}\n\n${photoRules}\n\n
 Generate a huddle briefing with THREE sections:
 
 **ADMIN TEAM** (front desk tasks before/during clinic):
-- Consent status actions, Aspire account checks, payment verification, any prep notes per patient
+- For each patient: what photos to take (use the photo rules above), consent status, Aspire account check, payment verification
 
 **CLINICAL TEAM** (what the injector/NP needs to know):
 - Product prep, timing notes, anything to flag clinically per patient
 
 **UPSELL & CONVERSION TIPS** (one tip per patient):
-- Based on what they're booked for + their history, suggest one natural add-on or upgrade the team can mention. Focus on services we offer: neurotoxin areas, fillers, biostimulators, memberships, packages.
+- Based on what they're booked for + their history, suggest one natural add-on or upgrade. Focus on: neurotoxin areas, fillers, biostimulators, memberships, packages.
 
 Keep each section tight — this is read aloud in a 5-minute standup.`;
 
