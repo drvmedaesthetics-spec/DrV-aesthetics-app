@@ -2316,7 +2316,11 @@ function huddleRender(events, which, rangeLabel) {
     byDay[dayKey].push(e);
   });
 
-  let html = '<div style="font-weight:700;font-size:16px;font-family:\'Cormorant Garamond\',serif;color:var(--plum);margin-bottom:16px;">Week of ' + rangeLabel + '</div>';
+  let html = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">'
+    + '<div style="font-weight:700;font-size:16px;font-family:\'Cormorant Garamond\',serif;color:var(--plum);">Week of ' + rangeLabel + '</div>'
+    + '<button class="ph-action-btn ph-btn-primary" style="padding:8px 16px;font-size:11px;" onclick="huddleGenerateBrief()">&#x2728; Generate Huddle Brief</button>'
+    + '</div>'
+    + '<div id="huddle-brief" style="display:none;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;"></div>';
 
   Object.keys(byDay).forEach(function(day) {
     html += '<div style="margin-bottom:20px;">'
@@ -2412,6 +2416,90 @@ async function huddleConsentToggle(checkbox, key) {
   } else {
     if (lbl) { lbl.textContent = ''; }
   }
+}
+
+async function huddleGenerateBrief() {
+  const brief = document.getElementById('huddle-brief');
+  if (!brief) return;
+  if (!huddleAppts.length) { alert('Upload a CSV first.'); return; }
+
+  brief.style.display = '';
+  brief.innerHTML = '<div style="font-size:13px;color:var(--warm-gray);font-style:italic;">&#x2728; Generating huddle briefing…</div>';
+
+  const visits = phGetVisits();
+  const patients = phGetPatients();
+
+  // Build patient summary for Claude
+  const patientLines = huddleAppts.map(function(e) {
+    const name = (e.contact && e.contact.name) || 'Unknown';
+    const service = e.notes || '';
+    const aspire = e.aspire && e.aspire !== '0' ? ' | Aspire: ' + e.aspire + ' pts' : '';
+    const consent = e.consentNeeded ? ' | CONSENT NEEDED' : '';
+    const nameParts = name.trim().split(' ');
+    const matched = patients.find(function(p) {
+      return p.fname.toLowerCase() === (nameParts[0]||'').toLowerCase() && (p.lname||'').toLowerCase() === (nameParts.slice(1).join(' ')||'').toLowerCase();
+    });
+    const history = matched ? (function() {
+      const pv = visits.filter(function(v){ return v.patientId === matched.id; }).sort(function(a,b){ return b.visitDate.localeCompare(a.visitDate); });
+      return pv.length ? 'Last visit ' + pv[0].visitDate + ': ' + (pv[0].treatments||'') : 'New patient';
+    })() : 'Not in DB (new or first visit)';
+    const mem = matched && matched.membership && matched.membership !== 'None' ? ' | Member: ' + matched.membership : ' | No membership';
+    return '• ' + name + ' — ' + service + aspire + mem + consent + ' | ' + history;
+  }).join('\n');
+
+  const sys = `You are the clinic director at Dr. V Medical Aesthetics, a luxury medical aesthetics practice.
+You are preparing the weekly team huddle briefing. Be concise, actionable, and practical.
+Tone: professional but warm. Use bullet points. No fluff.`;
+
+  const prompt = `Today's patient schedule:\n${patientLines}\n\n
+Generate a huddle briefing with THREE sections:
+
+**ADMIN TEAM** (front desk tasks before/during clinic):
+- Consent status actions, Aspire account checks, payment verification, any prep notes per patient
+
+**CLINICAL TEAM** (what the injector/NP needs to know):
+- Product prep, timing notes, anything to flag clinically per patient
+
+**UPSELL & CONVERSION TIPS** (one tip per patient):
+- Based on what they're booked for + their history, suggest one natural add-on or upgrade the team can mention. Focus on services we offer: neurotoxin areas, fillers, biostimulators, memberships, packages.
+
+Keep each section tight — this is read aloud in a 5-minute standup.`;
+
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1200, system: sys, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await res.json();
+    const text = (data.content && data.content[0] && data.content[0].text) || 'Error generating brief.';
+
+    // Render with basic markdown bold support
+    const rendered = text
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/^- /gm, '• ')
+      .replace(/\n/g, '<br>');
+
+    brief.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:18px;font-weight:600;color:var(--plum);">Huddle Briefing</div>'
+      + '<button class="ph-action-btn ph-btn-outline" style="font-size:10px;padding:4px 10px;" onclick="huddleCopyBrief()">&#x1F4CB; Copy Brief</button>'
+      + '</div>'
+      + '<div id="huddle-brief-text" style="font-size:13px;line-height:1.7;color:var(--cocoa);">' + rendered + '</div>';
+  } catch(e) {
+    brief.innerHTML = '<div style="color:var(--red);font-size:13px;">Error generating brief: ' + e.message + '</div>';
+  }
+}
+
+function huddleCopyBrief() {
+  const el = document.getElementById('huddle-brief-text');
+  if (!el) return;
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(function(){ btn.textContent = orig; }, 1500);
+  });
 }
 
 function huddleLogVisit(patientId) {
