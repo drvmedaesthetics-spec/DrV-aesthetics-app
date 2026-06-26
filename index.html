@@ -605,7 +605,8 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <span id="ph-sync-indicator" style="font-size:11px;color:var(--warm-gray);font-style:italic;"></span>
-        <button class="ph-action-btn ph-btn-outline" onclick="phSyncFromSheet(true)">&#8635; Sync</button>
+        <button class="ph-action-btn ph-btn-outline" onclick="phSyncFromSheet(true)" title="Add new patients from sheet to this device">&#8635; Sync</button>
+        <button class="ph-action-btn ph-btn-outline" onclick="phFullReload()" title="Replace all local data with sheet data (use if patients are missing)">&#8635;&#8635; Full Reload</button>
         <button class="ph-action-btn ph-btn-outline" onclick="phShowImport()">&#8593; Import AR CSV</button>
         <a class="ph-action-btn ph-btn-gold" style="text-decoration:none;display:inline-block;" href="https://docs.google.com/spreadsheets/d/1JLQkAkGUpSa_TprQMSALS5YIhAy-faYOA6FhB-T8ITI" target="_blank">View Sheet &#8599;</a>
       </div>
@@ -838,7 +839,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
 <div id="mode-huddle" class="mode-panel">
   <div class="section" style="margin-bottom:14px;">
     <div class="section-title">Weekly Huddle</div>
-    <div class="section-sub">Upload your AR_Invoices CSV from Aesthetic Record to prep the team. Use "This Week" for Tuesday huddle prep, "Last Week" to update patient records.</div>
+    <div class="section-sub">Upload your AR_Invoices CSV — it saves to the sheet automatically so you can pull up any past week.</div>
     <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;align-items:flex-start;">
       <div style="flex:1;min-width:220px;">
         <label style="display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--warm-gray);margin-bottom:6px;font-weight:700;">This Week — Huddle Prep</label>
@@ -853,12 +854,21 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
       <div style="flex:1;min-width:220px;">
         <label style="display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--warm-gray);margin-bottom:6px;font-weight:700;">Last Week — Update Patient DB</label>
         <label class="ph-action-btn ph-btn-outline" style="padding:10px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
-          &#x2705; Upload & Update DB
+          &#x2705; Upload &amp; Update DB
           <input type="file" accept=".csv" style="display:none;" onchange="huddleLoadCSV(event,'last')">
         </label>
       </div>
+      <div style="flex:1;min-width:220px;">
+        <label style="display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--warm-gray);margin-bottom:6px;font-weight:700;">Past Huddles</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="huddle-history-select" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);" onchange="huddleLoadHistory()">
+            <option value="">— select a past week —</option>
+          </select>
+          <button class="ph-action-btn ph-btn-outline" onclick="huddleFetchHistory()" style="padding:10px 14px;" title="Refresh list">&#8635;</button>
+        </div>
+      </div>
     </div>
-    <div style="margin-top:10px;font-size:11px;color:var(--warm-gray);">Export from AR: Reports → Invoices → filter by date range → Download CSV</div>
+    <div style="margin-top:10px;font-size:11px;color:var(--warm-gray);">Export from AR: Reports → Invoices → filter by date → Download CSV &nbsp;|&nbsp; Each upload saves automatically to the Huddles sheet tab.</div>
   </div>
   <div id="huddle-status" style="font-size:12px;color:var(--warm-gray);font-style:italic;margin-bottom:10px;"></div>
   <div id="huddle-body"></div>
@@ -1603,7 +1613,8 @@ async function phSyncFromSheet(manual){
       const existing=phGetPatients();const ids=new Set(existing.map(function(p){return p.id;}));
       const toAdd=[];
       for(const row of pd.result.values){
-        if(!row[0]||ids.has(row[0]))continue;
+        // Skip header row or empty rows
+        if(!row[0]||row[0]==='id'||row[0]==='ID'||ids.has(row[0]))continue;
         toAdd.push({id:row[0],fname:row[1]||'',lname:row[2]||'',dob:row[3]||'',phone:row[4]||'',email:row[5]||'',membership:row[6]||'None',notes:row[7]||'',createdAt:row[8]||''});
         added++;
       }
@@ -1613,18 +1624,55 @@ async function phSyncFromSheet(manual){
       const existing=phGetVisits();const ids=new Set(existing.map(function(v){return v.id;}));
       const toAdd=[];
       for(const row of vd.result.values){
-        if(!row[0]||ids.has(row[0]))continue;
+        if(!row[0]||row[0]==='id'||row[0]==='ID'||ids.has(row[0]))continue;
         toAdd.push({id:row[0],patientId:row[1]||'',visitDate:row[2]||'',treatments:row[3]||'',products:row[4]||'',injector:row[5]||'Anna',total:row[6]||0,payment:row[7]||'',notes:row[8]||'',createdAt:row[9]||''});
         added++;
       }
       if(toAdd.length)phSaveVisits(existing.concat(toAdd));
     }
-    if(ind)ind.textContent=added?('+'+added+' new records'):'Up to date ✓';
-    setTimeout(function(){if(ind)ind.textContent='';},3000);
+    const total=phGetPatients().length;
+    if(ind)ind.textContent=added?('+'+added+' new · '+total+' total'):(total+' patients ✓');
+    setTimeout(function(){if(ind)ind.textContent='';},4000);
     phRenderList();
   }catch(e){
-    if(ind)ind.textContent='Sync failed';
-    setTimeout(function(){if(ind)ind.textContent='';},3000);
+    if(ind)ind.textContent='Sync failed — check connection';
+    setTimeout(function(){if(ind)ind.textContent='';},4000);
+  }
+}
+
+async function phFullReload(){
+  if(!confirm('This will replace all patient data on this device with what\'s in the Google Sheet. Continue?'))return;
+  const ind=document.getElementById('ph-sync-indicator');
+  if(ind)ind.textContent='Full reload…';
+  try{
+    const [pr,vr]=await Promise.all([
+      fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Patients!A:I'})}),
+      fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Visits!A:J'})})
+    ]);
+    const pd=await pr.json();const vd=await vr.json();
+    if(pd.ok&&pd.result&&pd.result.values){
+      const patients=[];
+      for(const row of pd.result.values){
+        if(!row[0]||row[0]==='id'||row[0]==='ID')continue;
+        patients.push({id:row[0],fname:row[1]||'',lname:row[2]||'',dob:row[3]||'',phone:row[4]||'',email:row[5]||'',membership:row[6]||'None',notes:row[7]||'',createdAt:row[8]||''});
+      }
+      phSavePatients(patients);
+    }
+    if(vd.ok&&vd.result&&vd.result.values){
+      const visits=[];
+      for(const row of vd.result.values){
+        if(!row[0]||row[0]==='id'||row[0]==='ID')continue;
+        visits.push({id:row[0],patientId:row[1]||'',visitDate:row[2]||'',treatments:row[3]||'',products:row[4]||'',injector:row[5]||'Anna',total:row[6]||0,payment:row[7]||'',notes:row[8]||'',createdAt:row[9]||''});
+      }
+      phSaveVisits(visits);
+    }
+    const total=phGetPatients().length;
+    if(ind)ind.textContent=total+' patients loaded ✓';
+    setTimeout(function(){if(ind)ind.textContent='';},4000);
+    phRenderList();
+  }catch(e){
+    if(ind)ind.textContent='Reload failed: '+e.message;
+    setTimeout(function(){if(ind)ind.textContent='';},4000);
   }
 }
 
@@ -2028,6 +2076,74 @@ function huddleInit() {
     document.getElementById('huddle-status').textContent = '';
     document.getElementById('huddle-body').innerHTML = '<div class="ph-empty">Upload your AR_Invoices CSV to get started. Export from Aesthetic Record: Reports → Invoices → Download CSV.</div>';
   }
+  huddleFetchHistory();
+}
+
+async function huddleSaveToSheet(weekKey, weekLabel, events) {
+  try {
+    const blob = JSON.stringify(events);
+    const uploadedAt = new Date().toISOString();
+    // Try to find and update existing row for this weekKey
+    const readRes = await fetch('/api/sheets', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'read', sheetId:SHEET_ID, range:'Huddles!A:D'})});
+    const readData = await readRes.json();
+    const rows = (readData.ok && readData.result && readData.result.values) || [];
+    let foundRow = -1;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i][0] === weekKey) { foundRow = i + 1; break; } // 1-indexed
+    }
+    if (foundRow > 0) {
+      // Update existing row
+      await fetch('/api/sheets', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action:'write', sheetId:SHEET_ID, range:'Huddles!A'+foundRow+':D'+foundRow,
+          values:[[weekKey, weekLabel, uploadedAt, blob]]})});
+    } else {
+      // Append new row
+      await fetch('/api/sheets', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action:'append', sheetId:SHEET_ID, tab:'Huddles',
+          values:[[weekKey, weekLabel, uploadedAt, blob]]})});
+    }
+    return true;
+  } catch(e) { return false; }
+}
+
+async function huddleFetchHistory() {
+  const sel = document.getElementById('huddle-history-select');
+  if (!sel) return;
+  try {
+    const r = await fetch('/api/sheets', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'read', sheetId:SHEET_ID, range:'Huddles!A:C'})});
+    const d = await r.json();
+    const rows = (d.ok && d.result && d.result.values) || [];
+    // Sort descending by weekKey (ISO date)
+    rows.sort(function(a,b){ return (b[0]||'').localeCompare(a[0]||''); });
+    sel.innerHTML = '<option value="">— select a past week —</option>' +
+      rows.filter(function(r){ return r[0] && r[0] !== 'weekKey'; }).map(function(r) {
+        return '<option value="'+r[0]+'">'+r[1]+'</option>';
+      }).join('');
+  } catch(e) { /* silently fail */ }
+}
+
+async function huddleLoadHistory() {
+  const sel = document.getElementById('huddle-history-select');
+  const weekKey = sel && sel.value;
+  if (!weekKey) return;
+  const status = document.getElementById('huddle-status');
+  status.textContent = '⟳ Loading saved huddle…';
+  try {
+    const r = await fetch('/api/sheets', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'read', sheetId:SHEET_ID, range:'Huddles!A:D'})});
+    const d = await r.json();
+    const rows = (d.ok && d.result && d.result.values) || [];
+    const row = rows.find(function(r){ return r[0] === weekKey; });
+    if (!row || !row[3]) { status.textContent = '✗ No data found for that week'; return; }
+    const events = JSON.parse(row[3]);
+    huddleAppts = events;
+    status.textContent = '✓ Loaded ' + events.length + ' invoice' + (events.length!==1?'s':'') + ' — ' + row[1];
+    huddleRender(events, 'history', row[1]);
+  } catch(e) {
+    status.textContent = '✗ Error: ' + e.message;
+  }
 }
 
 function huddleWeekRange(offset) {
@@ -2068,8 +2184,23 @@ function huddleLoadCSV(event, which) {
             return d0.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + d1.toLocaleDateString('en-US',{month:'short',day:'numeric'});
           })()
         : range.label;
-      status.textContent = '✓ ' + events.length + ' invoice' + (events.length !== 1 ? 's' : '') + ' from ' + label + ' (' + file.name + ')';
+      status.textContent = '✓ ' + events.length + ' invoice' + (events.length !== 1 ? 's' : '') + ' from ' + label + ' — saving to sheet…';
       huddleRender(events, which, label);
+      // Derive a stable week key from the first event date (ISO Monday)
+      const weekKey = (function() {
+        if (!events.length) return new Date().toISOString().split('T')[0];
+        const d = new Date(events.map(function(e){ return e.startTime; }).sort()[0]);
+        const day = d.getDay();
+        const mon = new Date(d);
+        mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+        return mon.toISOString().split('T')[0];
+      })();
+      huddleSaveToSheet(weekKey, label, events).then(function(ok) {
+        status.textContent = ok
+          ? '✓ ' + events.length + ' invoices from ' + label + ' — saved to Huddles sheet'
+          : '✓ ' + events.length + ' invoices from ' + label + ' (sheet save failed — check connection)';
+        huddleFetchHistory(); // refresh the past-weeks dropdown
+      });
     } catch(err) {
       status.textContent = '✗ Could not parse CSV: ' + err.message;
     }
