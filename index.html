@@ -1188,6 +1188,13 @@ function ownerInRange(dateStr, r) {
 }
 function ownerAmt(v){ return parseFloat(v.total)||0; }
 
+function ownerInlineStat(label, val, color) {
+  return '<div style="background:var(--cream);border-radius:8px;padding:8px 10px;text-align:center;">'
+    +'<div style="font-size:9px;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:2px;">'+label+'</div>'
+    +'<div style="font-size:15px;font-weight:700;color:'+(color||'var(--plum)')+';font-family:\'Cormorant Garamond\',serif;">'+val+'</div>'
+    +'</div>';
+}
+
 function ownerComputeProvidersAR(monthData, evProvider, evAmt, evDate) {
   const map = {};
   monthData.forEach(function(e){
@@ -1266,18 +1273,53 @@ function ownerRenderDash() {
     + stat('New Patients (mo)', newPts, 'var(--mauve)')
     + '</div>';
 
-  // Provider leaderboard — from AR data, dedup patients by name per provider
+  // Provider cards — inline, all stats visible without clicking
   const provs = ownerComputeProvidersAR(monthData, evProvider, evAmt, evDate);
-  html += '<div class="section"><div class="section-title">Provider Leaderboard</div><div class="section-sub">This month, by revenue.</div>';
-  if (!provs.length) html += '<div class="ph-empty" style="padding:20px;">No visits this month.</div>';
-  else {
-    html += '<table class="ph-visit-table"><thead><tr><th>Provider</th><th>Revenue</th><th>Patients</th><th>Avg Ticket</th><th></th></tr></thead><tbody>';
-    provs.forEach(function(p){
-      html += '<tr><td style="font-weight:600;">'+p.name+'</td><td>'+fmt(p.revenue)+'</td><td>'+p.count+'</td><td>'+fmt(p.avg)+'</td>'
-        + '<td><button class="ph-action-btn ph-btn-outline" style="font-size:10px;padding:4px 10px;" onclick="ownerOpenCard(\''+encodeURIComponent(p.name)+'\')">View Card</button></td></tr>';
-    });
-    html += '</tbody></table>';
-  }
+  const provRates = ownerJSON('drv_injector_rates');
+  const provMonthlyHours = ownerJSON('drv_injector_monthly_hours');
+  const provGoals = ownerJSON('drv_injector_goals');
+  const nowMoKey2 = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const BTIERS = [{min:900,label:'Tier 3',bonus:1000,color:'var(--gold)'},{min:800,label:'Tier 2',bonus:550,color:'var(--mauve)'},{min:600,label:'Tier 1',bonus:350,color:'var(--blue)'}];
+
+  html += '<div class="section"><div class="section-title">Provider Performance</div><div class="section-sub">This month — from AR data.</div>';
+  if (!provs.length) html += '<div class="ph-empty" style="padding:20px;">No visits this month. Upload a huddle CSV to populate.</div>';
+  provs.forEach(function(p){
+    const rate = parseFloat(provRates[p.name])||0;
+    const hrs = parseFloat((provMonthlyHours[p.name]||{})[nowMoKey2])||0;
+    const laborCost = rate && hrs ? hrs*rate : 0;
+    const rph = hrs ? Math.round(p.revenue/hrs) : 0;
+    const profitAfterLabor = laborCost ? p.revenue - laborCost : 0;
+    const goal = parseFloat(provGoals[p.name])||0;
+    const prog = goal ? Math.min(100,Math.round(p.revenue/goal*100)) : 0;
+    const tier = rph ? BTIERS.find(function(t){return rph>=t.min;}) : null;
+    const nextTier = rph ? BTIERS.slice().reverse().find(function(t){return rph<t.min;}) : null;
+
+    html += '<div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;background:var(--white);">'
+      // Header row
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'
+      +'<div style="font-size:17px;font-weight:700;color:var(--plum);font-family:\'Cormorant Garamond\',serif;">'+p.name+'</div>'
+      +(tier?'<span style="background:'+tier.color+';color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.05em;">'+tier.label+' — +'+fmt(tier.bonus)+'/qtr</span>':'<span style="background:var(--cream);color:var(--warm-gray);font-size:11px;padding:3px 10px;border-radius:20px;">No tier yet</span>')
+      +'</div>'
+      // Stat grid
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px;">'
+      +ownerInlineStat('Revenue', fmt(p.revenue), 'var(--gold)')
+      +ownerInlineStat('Patients', p.count, 'var(--plum)')
+      +ownerInlineStat('Avg Ticket', fmt(p.avg), 'var(--plum)')
+      +ownerInlineStat('Hours', hrs?hrs+'h':'— enter hrs', hrs?'var(--plum)':'var(--warm-gray)')
+      +ownerInlineStat('Labor Cost', laborCost?fmt(laborCost):'—', laborCost?'var(--cocoa)':'var(--warm-gray)')
+      +ownerInlineStat('RPH', rph?fmt(rph)+'/hr':'—', rph>=900?'var(--gold)':rph>=600?'var(--mauve)':'var(--red)')
+      +ownerInlineStat('Profit After Labor', profitAfterLabor?fmt(profitAfterLabor):'—', profitAfterLabor>0?'var(--green)':'var(--red)')
+      +'</div>'
+      // RPH context line
+      +(rph?'<div style="font-size:12px;color:var(--cocoa);margin-bottom:8px;">RPH: <strong>'+fmt(rph)+'/hr</strong>'
+        +(tier?' → <strong style="color:'+tier.color+';">'+tier.label+'</strong> ('+fmt(tier.bonus)+'/qtr bonus)':'')
+        +(nextTier?' &nbsp;<span style="color:var(--warm-gray);">Next tier at $'+nextTier.min+'/hr</span>':'')
+        +'</div>':'')
+      // Bonus goal bar
+      +(goal?'<div style="font-size:11px;display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:var(--warm-gray);">Monthly Goal</span><span style="font-weight:700;">'+fmt(p.revenue)+' / '+fmt(goal)+' ('+prog+'%)</span></div>'
+        +'<div style="background:var(--cream);border-radius:6px;height:12px;overflow:hidden;"><div style="width:'+prog+'%;height:100%;background:linear-gradient(135deg,var(--gold),var(--gold-light));"></div></div>':'')
+      +'</div>';
+  });
   html += '</div>';
 
   // Top services
