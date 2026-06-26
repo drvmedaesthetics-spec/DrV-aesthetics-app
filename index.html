@@ -1234,6 +1234,7 @@ function ownerRenderDash() {
   const arEvents = _ownerHuddleEvents || [];
   const visits = phGetVisits();
   const patients = phGetPatients();
+  const now = new Date();
   const weekR = ownerWeekRange();
   const monthR = ownerMonthRange();
   const fmt = function(n){ return '$'+Math.round(n).toLocaleString(); };
