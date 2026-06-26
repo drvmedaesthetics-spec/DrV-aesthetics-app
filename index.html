@@ -1111,6 +1111,27 @@ ownerSeedDefaults();
 function ownerJSON(key){ try { return JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){ return {}; } }
 let _ownerUnlocked = false;
 
+let _ownerHuddleEvents = null; // cached AR events from all huddle uploads
+
+async function ownerLoadHuddleData() {
+  // Read all rows from Huddles sheet tab: [weekKey, weekLabel, uploadedAt, dataJSON]
+  try {
+    const r = await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Huddles!A:D'})});
+    const d = await r.json();
+    if (!d.ok || !d.result || !d.result.values) return;
+    const allEvents = [];
+    d.result.values.forEach(function(row){
+      if (!row[3]) return;
+      try {
+        const events = JSON.parse(row[3]);
+        if (Array.isArray(events)) events.forEach(function(e){ allEvents.push(e); });
+      } catch(e){}
+    });
+    _ownerHuddleEvents = allEvents;
+  } catch(e) { _ownerHuddleEvents = []; }
+}
+
 function ownerInit() {
   if (_ownerUnlocked) { ownerRenderDash(); }
   else {
@@ -1120,12 +1141,14 @@ function ownerInit() {
     document.getElementById('owner-pin-err').textContent='';
   }
 }
-function ownerUnlock() {
+async function ownerUnlock() {
   const v = document.getElementById('owner-pin-input').value.trim();
   if (v === ownerGetPin()) {
     _ownerUnlocked = true;
     document.getElementById('owner-lock').style.display='none';
     document.getElementById('owner-dash').style.display='block';
+    document.getElementById('owner-content').innerHTML = '<div style="padding:30px;text-align:center;color:var(--warm-gray);">Loading AR data…</div>';
+    await ownerLoadHuddleData();
     ownerRenderDash();
   } else {
     document.getElementById('owner-pin-err').textContent='Incorrect PIN';
@@ -1157,6 +1180,23 @@ function ownerInRange(dateStr, r) {
 }
 function ownerAmt(v){ return parseFloat(v.total)||0; }
 
+function ownerComputeProvidersAR(monthData, evProvider, evAmt, evDate) {
+  const map = {};
+  monthData.forEach(function(e){
+    const inj = evProvider(e);
+    if (!map[inj]) map[inj] = { name:inj, revenue:0, patients:new Set() };
+    map[inj].revenue += evAmt(e);
+    // Use patient name as unique key (AR events have patient name, not ID)
+    const ptKey = (e.patient||e.fname||'').toLowerCase().trim()+'|'+evDate(e);
+    if (ptKey) map[inj].patients.add(ptKey);
+  });
+  return Object.keys(map).map(function(k){
+    const m = map[k];
+    const count = m.patients.size;
+    return { name:m.name, revenue:m.revenue, count:count, avg: count?Math.round(m.revenue/count):0 };
+  }).sort(function(a,b){ return b.revenue-a.revenue; });
+}
+
 function ownerComputeProviders(visits, monthR) {
   const map = {};
   visits.forEach(function(v){
@@ -1175,31 +1215,51 @@ function ownerComputeProviders(visits, monthR) {
 
 function ownerRenderDash() {
   try {
+  // Use AR huddle events as source of truth; fall back to manually logged visits
+  const arEvents = _ownerHuddleEvents || [];
   const visits = phGetVisits();
   const patients = phGetPatients();
   const weekR = ownerWeekRange();
   const monthR = ownerMonthRange();
   const fmt = function(n){ return '$'+Math.round(n).toLocaleString(); };
 
-  const weekRev = visits.filter(function(v){ return ownerInRange(v.visitDate, weekR); }).reduce(function(s,v){ return s+ownerAmt(v); },0);
-  const monthRev = visits.filter(function(v){ return ownerInRange(v.visitDate, monthR); }).reduce(function(s,v){ return s+ownerAmt(v); },0);
+  // Helper: get date string from AR event or visit
+  function evDate(e){ return (e.startTime||e.start||e.visitDate||'').slice(0,10); }
+  function evAmt(e){ return parseFloat(e.amount||e.total)||0; }
+  function evProvider(e){ return (e.provider||e.injector||'Unknown').trim()||'Unknown'; }
+  function evService(e){ return (e.service||e.treatments||'').toLowerCase(); }
+
+  // Merge AR events + manually logged visits (prefer AR if both exist)
+  const allData = arEvents.length ? arEvents : visits;
+
+  const weekData = allData.filter(function(e){ return ownerInRange(evDate(e), weekR); });
+  const monthData = allData.filter(function(e){ return ownerInRange(evDate(e), monthR); });
+
+  // Dedup by patient+day for revenue (AR has one row per service line item)
+  const weekRev = weekData.reduce(function(s,e){ return s+evAmt(e); },0);
+  const monthRev = monthData.reduce(function(s,e){ return s+evAmt(e); },0);
   const wt = parseFloat(localStorage.getItem('drv_huddle_weekly_target'))||20000;
   const gap = wt - weekRev;
-  const newPts = patients.filter(function(p){ return p.createdAt && ownerInRange(p.createdAt.slice(0,10), monthR); }).length;
+  // New patients: unique patient names in this month not seen in prior months
+  const priorNames = new Set(allData.filter(function(e){ return !ownerInRange(evDate(e),monthR); }).map(function(e){ return (e.patient||e.fname||'').toLowerCase().trim(); }).filter(Boolean));
+  const newPts = new Set(monthData.map(function(e){ return (e.patient||e.fname||'').toLowerCase().trim(); }).filter(function(n){ return n && !priorNames.has(n); })).size;
 
   function stat(label, val, color){ return '<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 16px;">'
     + '<div style="font-size:11px;color:var(--mauve);font-weight:600;text-transform:uppercase;letter-spacing:.06em;">'+label+'</div>'
     + '<div style="font-size:20px;font-weight:700;color:'+(color||'var(--plum)')+';font-family:\'Cormorant Garamond\',serif;margin-top:4px;">'+val+'</div></div>'; }
 
-  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px;">'
+  const dataSource = arEvents.length
+    ? '<div style="font-size:11px;color:var(--green);margin-bottom:12px;">&#x2705; Pulling from AR invoice data ('+arEvents.length+' line items across all huddle uploads)</div>'
+    : '<div style="font-size:11px;color:var(--amber);margin-bottom:12px;">&#x26A0; No AR huddle data found — upload a CSV in Weekly Huddle to see real numbers. Showing manually logged visits only.</div>';
+  let html = dataSource+'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px;">'
     + stat('Weekly Revenue', fmt(weekRev), 'var(--plum)')
     + stat('Monthly Revenue', fmt(monthRev), 'var(--gold)')
     + stat('Weekly Target Gap', gap>0?('<span style="color:var(--red);">'+fmt(gap)+' to go</span>'):'<span style="color:var(--green);">On track &#x2713;</span>')
     + stat('New Patients (mo)', newPts, 'var(--mauve)')
     + '</div>';
 
-  // Provider leaderboard
-  const provs = ownerComputeProviders(visits, monthR);
+  // Provider leaderboard — from AR data, dedup patients by name per provider
+  const provs = ownerComputeProvidersAR(monthData, evProvider, evAmt, evDate);
   html += '<div class="section"><div class="section-title">Provider Leaderboard</div><div class="section-sub">This month, by revenue.</div>';
   if (!provs.length) html += '<div class="ph-empty" style="padding:20px;">No visits this month.</div>';
   else {
@@ -1227,8 +1287,8 @@ function ownerRenderDash() {
     {label:'IV', re:/\biv\b/i},
   ];
   const counts = svcDefs.map(function(s){ return {label:s.label, n:0}; });
-  visits.filter(function(v){ return ownerInRange(v.visitDate, monthR); }).forEach(function(v){
-    const t = v.treatments||'';
+  monthData.forEach(function(e){
+    const t = evService(e);
     svcDefs.forEach(function(s,i){ if (s.re.test(t)) counts[i].n++; });
   });
   const topSvc = counts.filter(function(c){ return c.n>0; }).sort(function(a,b){ return b.n-a.n; }).slice(0,5);
@@ -1251,8 +1311,8 @@ function ownerRenderDash() {
     + (Object.keys(memTypes).length ? Object.keys(memTypes).map(function(k){ return '<span class="out-badge badge-gold" style="margin:2px;">'+k+': '+memTypes[k]+'</span>'; }).join('') : '<div class="section-sub">No active memberships.</div>')
     + '</div>';
 
-  // Upsell conversion
-  const monthVisits = visits.filter(function(v){ return ownerInRange(v.visitDate, monthR); });
+  // Upsell conversion — from manually logged visits only (AR doesn't track this)
+  const monthVisits = visits.filter(function(v){ return ownerInRange(v.visitDate||'', monthR); });
   const offered = monthVisits.filter(function(v){ return v.upsellOffered && v.upsellOffered!==''; });
   const accepted = offered.filter(function(v){ return v.upsellAccepted==='Yes'; });
   const conv = offered.length ? Math.round(accepted.length/offered.length*100) : 0;
