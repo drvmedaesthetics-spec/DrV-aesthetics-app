@@ -1106,6 +1106,14 @@ function ownerSeedDefaults(){
   } else {
     try { const p=JSON.parse(localStorage.getItem('drv_injector_pins')); if(!p.Anna){p.Anna='1560';localStorage.setItem('drv_injector_pins',JSON.stringify(p));} } catch(e){}
   }
+  // Anna's hourly rate
+  if(!localStorage.getItem('drv_injector_rates')) localStorage.setItem('drv_injector_rates', JSON.stringify({Anna:55}));
+  // Anna's known hours by month key YYYY-MM
+  if(!localStorage.getItem('drv_injector_monthly_hours')){
+    localStorage.setItem('drv_injector_monthly_hours', JSON.stringify({
+      Anna: {'2025-10':8.25,'2025-11':68.73,'2025-12':39.00,'2026-01':54.75,'2026-02':63.50,'2026-03':61.50,'2026-04':30.25,'2026-05':80.75,'2026-06':40.50}
+    }));
+  }
 }
 ownerSeedDefaults();
 function ownerJSON(key){ try { return JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){ return {}; } }
@@ -1337,13 +1345,18 @@ function ownerRenderDash() {
   html += '<div class="section"><div class="section-title">Owner Settings</div><div class="section-sub">Set per-injector PINs, estimated hours this month, and bonus goals.</div>';
   html += pinReminder;
   html += '<div class="form-group" style="margin-bottom:14px;"><label>Owner PIN</label><input id="owner-set-pin" value="'+ownerGetPin()+'" style="max-width:160px;"/></div>';
-  html += '<table class="ph-visit-table"><thead><tr><th>Injector</th><th>PIN</th><th>Hours (mo)</th><th>Bonus Goal $</th></tr></thead><tbody>';
+  const rates = ownerJSON('drv_injector_rates');
+  const monthlyHours = ownerJSON('drv_injector_monthly_hours');
+  const nowMo = new Date(); const curMoKey = nowMo.getFullYear()+'-'+String(nowMo.getMonth()+1).padStart(2,'0');
+  html += '<table class="ph-visit-table"><thead><tr><th>Injector</th><th>PIN</th><th>$/hr Rate</th><th>Hours This Month</th><th>Bonus Goal $</th></tr></thead><tbody>';
   provNames.forEach(function(n){
     const safe = n.replace(/[^A-Za-z0-9]/g,'_');
+    const curHrs = (monthlyHours[n]||{})[curMoKey]||'';
     html += '<tr><td style="font-weight:600;">'+n+'</td>'
-      + '<td><input id="oset-pin-'+safe+'" data-name="'+encodeURIComponent(n)+'" value="'+(pins[n]||'')+'" style="width:80px;"/></td>'
-      + '<td><input id="oset-hrs-'+safe+'" data-name="'+encodeURIComponent(n)+'" type="number" value="'+(hours[n]||'')+'" style="width:80px;"/></td>'
-      + '<td><input id="oset-goal-'+safe+'" data-name="'+encodeURIComponent(n)+'" type="number" value="'+(goals[n]||'')+'" style="width:100px;"/></td></tr>';
+      + '<td><input id="oset-pin-'+safe+'" value="'+(pins[n]||'')+'" style="width:70px;" placeholder="PIN"/></td>'
+      + '<td><input id="oset-rate-'+safe+'" type="number" value="'+(rates[n]||'')+'" style="width:70px;" placeholder="55"/></td>'
+      + '<td><input id="oset-hrs-'+safe+'" type="number" value="'+curHrs+'" style="width:80px;" placeholder="0"/></td>'
+      + '<td><input id="oset-goal-'+safe+'" type="number" value="'+(goals[n]||'')+'" style="width:100px;" placeholder="15000"/></td></tr>';
   });
   html += '</tbody></table>';
   html += '<button class="ph-action-btn ph-btn-primary" style="margin-top:12px;" onclick="ownerSaveSettings()">Save Settings</button> <span id="owner-set-status" style="font-size:12px;color:var(--green);"></span>';
@@ -1359,18 +1372,27 @@ function ownerRenderDash() {
 function ownerSaveSettings() {
   const newPin = document.getElementById('owner-set-pin').value.trim();
   if (newPin) localStorage.setItem('drv_owner_pin', newPin);
-  const pins={}, hours={}, goals={};
+  const pins={}, goals={}, rates={};
+  const now = new Date();
+  const monthKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const monthlyHours = ownerJSON('drv_injector_monthly_hours');
   (window._ownerProvNames||[]).forEach(function(n){
     const safe = n.replace(/[^A-Za-z0-9]/g,'_');
     const pe = document.getElementById('oset-pin-'+safe);
+    const re = document.getElementById('oset-rate-'+safe);
     const he = document.getElementById('oset-hrs-'+safe);
     const ge = document.getElementById('oset-goal-'+safe);
     if (pe && pe.value.trim()) pins[n]=pe.value.trim();
-    if (he && he.value.trim()) hours[n]=parseFloat(he.value)||0;
+    if (re && re.value.trim()) rates[n]=parseFloat(re.value)||0;
+    if (he && he.value.trim()){
+      if (!monthlyHours[n]) monthlyHours[n]={};
+      monthlyHours[n][monthKey]=parseFloat(he.value)||0;
+    }
     if (ge && ge.value.trim()) goals[n]=parseFloat(ge.value)||0;
   });
   localStorage.setItem('drv_injector_pins', JSON.stringify(pins));
-  localStorage.setItem('drv_injector_hours', JSON.stringify(hours));
+  localStorage.setItem('drv_injector_rates', JSON.stringify(rates));
+  localStorage.setItem('drv_injector_monthly_hours', JSON.stringify(monthlyHours));
   localStorage.setItem('drv_injector_goals', JSON.stringify(goals));
   const s=document.getElementById('owner-set-status'); s.textContent='✓ Saved';
   setTimeout(function(){s.textContent='';},2500);
@@ -1390,32 +1412,76 @@ function ownerOpenCard(encName) {
 }
 
 function ownerRenderCard(name) {
+  const arEvents = _ownerHuddleEvents || [];
   const visits = phGetVisits();
   const monthR = ownerMonthRange();
-  const hours = ownerJSON('drv_injector_hours');
+  const now = new Date();
+  const monthKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const goals = ownerJSON('drv_injector_goals');
+  const rates = ownerJSON('drv_injector_rates');
+  const monthlyHours = ownerJSON('drv_injector_monthly_hours');
   const fmt = function(n){ return '$'+Math.round(n).toLocaleString(); };
-  const mv = visits.filter(function(v){ return (v.injector||'Unknown').trim()===name && ownerInRange(v.visitDate, monthR); });
-  const revenue = mv.reduce(function(s,v){ return s+ownerAmt(v); },0);
-  const ptSet = new Set(); mv.forEach(function(v){ if(v.patientId)ptSet.add(v.patientId); });
-  const count = ptSet.size;
-  const avg = count?Math.round(revenue/count):0;
-  const hrs = parseFloat(hours[name])||0;
-  const rph = hrs?Math.round(revenue/hrs):0;
-  const goal = parseFloat(goals[name])||0;
-  const prog = goal?Math.min(100,Math.round(revenue/goal*100)):0;
 
-  function stat(label,val,color){ return '<div style="background:var(--cream);border-radius:8px;padding:10px 14px;text-align:center;"><div style="font-size:10px;color:var(--mauve);text-transform:uppercase;letter-spacing:.05em;font-weight:600;">'+label+'</div><div style="font-size:18px;font-weight:700;color:'+(color||'var(--plum)')+';font-family:\'Cormorant Garamond\',serif;margin-top:3px;">'+val+'</div></div>'; }
+  // Revenue from AR huddle data (preferred) or manually logged visits
+  let revenue = 0; let count = 0;
+  if (arEvents.length) {
+    const me = arEvents.filter(function(e){ return ownerInRange((e.startTime||e.start||'').slice(0,10), monthR) && (e.provider||'').toLowerCase().includes(name.toLowerCase()); });
+    revenue = me.reduce(function(s,e){ return s+parseFloat(e.amount||0); },0);
+    count = new Set(me.map(function(e){ return (e.patient||'').toLowerCase().trim()+'|'+(e.startTime||e.start||'').slice(0,10); }).filter(Boolean)).size;
+  } else {
+    const mv = visits.filter(function(v){ return (v.injector||'').trim()===name && ownerInRange(v.visitDate||'', monthR); });
+    revenue = mv.reduce(function(s,v){ return s+parseFloat(v.total||0); },0);
+    count = new Set(mv.map(function(v){ return v.patientId; }).filter(Boolean)).size;
+  }
+  const avg = count ? Math.round(revenue/count) : 0;
 
-  let html = '<div class="ph-modal-title">'+name+' — This Month</div>'
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px;">'
-    + stat('Revenue', fmt(revenue), 'var(--gold)')
-    + stat('Patients', count)
-    + stat('Avg Ticket', fmt(avg))
-    + stat('RPH', hrs?fmt(rph):'set hours')
-    + '</div>';
-  html += '<div style="margin-top:6px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>Bonus Goal Progress</span><span style="font-weight:700;">'+(goal?fmt(revenue)+' / '+fmt(goal)+' ('+prog+'%)':'no goal set')+'</span></div>'
-    + '<div style="background:var(--cream);border-radius:8px;height:18px;overflow:hidden;"><div style="width:'+prog+'%;height:100%;background:linear-gradient(135deg,var(--gold),var(--gold-light));"></div></div></div>';
+  // Hours: from monthly hours table for this month
+  const injHours = monthlyHours[name] || {};
+  const hrs = parseFloat(injHours[monthKey]) || 0;
+  const rate = parseFloat(rates[name]) || 0;
+  const laborCost = hrs * rate;
+  const rph = hrs ? Math.round(revenue/hrs) : 0;
+  const profitAfterLabor = revenue - laborCost;
+  const goal = parseFloat(goals[name]) || 0;
+  const prog = goal ? Math.min(100,Math.round(revenue/goal*100)) : 0;
+
+  function stat(label,val,sub,color){ return '<div style="background:var(--cream);border-radius:8px;padding:10px 14px;text-align:center;">'
+    +'<div style="font-size:10px;color:var(--mauve);text-transform:uppercase;letter-spacing:.05em;font-weight:600;">'+label+'</div>'
+    +'<div style="font-size:18px;font-weight:700;color:'+(color||'var(--plum)')+';font-family:\'Cormorant Garamond\',serif;margin-top:3px;">'+val+'</div>'
+    +(sub?'<div style="font-size:10px;color:var(--warm-gray);margin-top:2px;">'+sub+'</div>':'')
+    +'</div>'; }
+
+  let html = '<div class="ph-modal-title">'+name+' — '+now.toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px;">'
+    +stat('Revenue', fmt(revenue), arEvents.length?'from AR':'from log', 'var(--gold)')
+    +stat('Patients', count, 'unique visits')
+    +stat('Avg Ticket', fmt(avg))
+    +stat('Hours', hrs||'—', rate?'@ $'+rate+'/hr':'set rate')
+    +stat('Labor Cost', rate&&hrs?fmt(laborCost):'—', hrs&&rate?hrs+'h × $'+rate:'enter hours & rate')
+    +stat('RPH', hrs?fmt(rph):'—', 'revenue/hr', rph>200?'var(--green)':rph>100?'var(--amber)':'var(--red)')
+    +stat('Profit After Labor', (rate&&hrs)?fmt(profitAfterLabor):'—', 'rev − labor', profitAfterLabor>0?'var(--green)':'var(--red)')
+    +'</div>';
+
+  // Bonus goal progress bar
+  html += '<div style="margin:16px 0 8px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">'
+    +'<span style="font-weight:600;color:var(--plum);">Bonus Goal</span>'
+    +'<span style="font-weight:700;">'+(goal ? fmt(revenue)+' / '+fmt(goal)+' ('+prog+'%)' : 'no goal set — add in Owner Settings')+'</span></div>'
+    +(goal?'<div style="background:var(--cream);border-radius:8px;height:20px;overflow:hidden;"><div style="width:'+prog+'%;height:100%;background:linear-gradient(135deg,var(--gold),var(--gold-light));transition:width .4s;"></div></div>'
+      +'<div style="font-size:11px;color:var(--warm-gray);margin-top:4px;">'+(prog>=100?'&#x1F3AF; Goal reached!':'$'+Math.max(0,Math.round(goal-revenue)).toLocaleString()+' to go')+'</div>':'')
+    +'</div>';
+
+  // Monthly hours history
+  if (Object.keys(injHours).length) {
+    html += '<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mauve);margin-bottom:8px;">Hours History</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+    Object.keys(injHours).sort().forEach(function(mo){
+      const d = new Date(mo+'-15');
+      const label = d.toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+      html += '<div style="font-size:11px;background:var(--cream);border-radius:6px;padding:4px 8px;"><strong>'+label+'</strong> '+injHours[mo]+'h</div>';
+    });
+    html += '</div></div>';
+  }
+
   document.getElementById('owner-card-body').innerHTML = html;
   document.getElementById('owner-card-modal').style.display='flex';
 }
