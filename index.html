@@ -1189,9 +1189,9 @@ function ownerInRange(dateStr, r) {
 function ownerAmt(v){ return parseFloat(v.total)||0; }
 
 function ownerInlineStat(label, val, color) {
-  return '<div style="background:var(--cream);border-radius:8px;padding:8px 10px;text-align:center;">'
-    +'<div style="font-size:9px;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:2px;">'+label+'</div>'
-    +'<div style="font-size:15px;font-weight:700;color:'+(color||'var(--plum)')+';font-family:\'Cormorant Garamond\',serif;">'+val+'</div>'
+  return '<div style="background:var(--cream);border-radius:8px;padding:8px 6px;text-align:center;min-width:0;overflow:hidden;">'
+    +'<div style="font-size:9px;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</div>'
+    +'<div style="font-size:14px;font-weight:700;color:'+(color||'var(--plum)')+';font-family:\'Cormorant Garamond\',serif;word-break:break-word;">'+val+'</div>'
     +'</div>';
 }
 
@@ -1201,8 +1201,9 @@ function ownerComputeProvidersAR(monthData, evProvider, evAmt, evDate) {
     const inj = evProvider(e);
     if (!map[inj]) map[inj] = { name:inj, revenue:0, patients:new Set() };
     map[inj].revenue += evAmt(e);
-    // Use patient name as unique key (AR events have patient name, not ID)
-    const ptKey = (e.patient||e.fname||'').toLowerCase().trim()+'|'+evDate(e);
+    // Use patient name as unique key (AR events have patient name in contact.name)
+    const ptName = (e.contact&&e.contact.name||e.patient||e.fname||'').toLowerCase().trim();
+    const ptKey = ptName+'|'+evDate(e);
     if (ptKey) map[inj].patients.add(ptKey);
   });
   return Object.keys(map).map(function(k){
@@ -1243,7 +1244,7 @@ function ownerRenderDash() {
   function evDate(e){ return (e.startTime||e.start||e.visitDate||'').slice(0,10); }
   function evAmt(e){ return parseFloat(e.amount||e.total)||0; }
   function evProvider(e){ return (e.provider||e.injector||'Unknown').trim()||'Unknown'; }
-  function evService(e){ return (e.service||e.treatments||'').toLowerCase(); }
+  function evService(e){ return (e.notes||e.service||e.treatments||'').toLowerCase(); }
 
   // Merge AR events + manually logged visits (prefer AR if both exist)
   const allData = arEvents.length ? arEvents : visits;
@@ -1257,8 +1258,9 @@ function ownerRenderDash() {
   const wt = parseFloat(localStorage.getItem('drv_huddle_weekly_target'))||20000;
   const gap = wt - weekRev;
   // New patients: unique patient names in this month not seen in prior months
-  const priorNames = new Set(allData.filter(function(e){ return !ownerInRange(evDate(e),monthR); }).map(function(e){ return (e.patient||e.fname||'').toLowerCase().trim(); }).filter(Boolean));
-  const newPts = new Set(monthData.map(function(e){ return (e.patient||e.fname||'').toLowerCase().trim(); }).filter(function(n){ return n && !priorNames.has(n); })).size;
+  function evName(e){ return (e.contact&&e.contact.name||e.patient||e.fname||'').toLowerCase().trim(); }
+  const priorNames = new Set(allData.filter(function(e){ return !ownerInRange(evDate(e),monthR); }).map(evName).filter(Boolean));
+  const newPts = new Set(monthData.map(evName).filter(function(n){ return n && !priorNames.has(n); })).size;
 
   function stat(label, val, color){ return '<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 16px;">'
     + '<div style="font-size:11px;color:var(--mauve);font-weight:600;text-transform:uppercase;letter-spacing:.06em;">'+label+'</div>'
@@ -1295,14 +1297,14 @@ function ownerRenderDash() {
     const tier = rph ? BTIERS.find(function(t){return rph>=t.min;}) : null;
     const nextTier = rph ? BTIERS.slice().reverse().find(function(t){return rph<t.min;}) : null;
 
-    html += '<div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;background:var(--white);">'
+    html += '<div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;background:var(--white);overflow:hidden;">'
       // Header row
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'
       +'<div style="font-size:17px;font-weight:700;color:var(--plum);font-family:\'Cormorant Garamond\',serif;">'+p.name+'</div>'
       +(tier?'<span style="background:'+tier.color+';color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.05em;">'+tier.label+' — +'+fmt(tier.bonus)+'/qtr</span>':'<span style="background:var(--cream);color:var(--warm-gray);font-size:11px;padding:3px 10px;border-radius:20px;">No tier yet</span>')
       +'</div>'
       // Stat grid
-      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px;">'
+      +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;">'
       +ownerInlineStat('Revenue', fmt(p.revenue), 'var(--gold)')
       +ownerInlineStat('Patients', p.count, 'var(--plum)')
       +ownerInlineStat('Avg Ticket', fmt(p.avg), 'var(--plum)')
@@ -3161,9 +3163,10 @@ function huddleParseARCSV(text) {
 
   const iDate     = col(['date','invoicedate','appointment date','appt date','service date']);
   const iPatient  = col(['patient','patientname','patient name','client','clientname','client name','name']);
-  const iService  = col(['service','services','item','items','description','treatment']);
-  const iAmount   = col(['amount','total','invoice total','price','charge','fee']);
-  const iProvider = col(['provider','injector','staff','np','clinician']);
+  const iService  = col(['item','service','services','items','description','treatment']);
+  // Use Item Total Collected per line item (AR puts Gross Total only on first row per invoice)
+  const iAmount   = col(['itemtotalcollected','item total collected','itemtotal','amount','total','invoice total','price','charge','fee']);
+  const iProvider = col(['employee','provider','injector','staff','np','clinician']);
   const iTime     = col(['time','appttime','appointment time','appt time','start time']);
   const iAspire   = col(['aspire','aspirerewards','aspire rewards','aspire points','aspirepts','loyaltypoints','loyalty points','rewards','rewardpoints']);
 
