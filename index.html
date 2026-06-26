@@ -278,6 +278,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
     <button class="mode-btn" onclick="switchMode('qualify',this)">&#x2605; Lead Qualifier</button>
     <button class="mode-btn" onclick="switchMode('settings',this)">&#x2699; Pricing &amp; Packages</button>
     <button class="mode-btn" onclick="switchMode('huddle',this)">&#x1F4CB; Weekly Huddle</button>
+    <button class="mode-btn" onclick="switchMode('owner',this)">&#x1F451; Owner</button>
   </div>
 </div>
 
@@ -710,6 +711,28 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
         <div class="form-group"><label>Notes</label><textarea id="phv-notes" placeholder="Clinical notes, reactions, follow-up plan..."></textarea></div>
       </div>
       <div id="phv-upsell" style="display:none;margin-bottom:12px;"></div>
+      <div class="ph-form-row">
+        <div class="form-group">
+          <label>Upsell Offered</label>
+          <select id="phv-upsell-offered">
+            <option value="">— None —</option>
+            <option value="Membership">Membership enrollment</option>
+            <option value="Add-on Service">Add-on service</option>
+            <option value="Skincare Package">ZO Skincare package</option>
+            <option value="Next Treatment">Next treatment pre-book</option>
+            <option value="Membership + Service">Membership + add-on</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Upsell Accepted?</label>
+          <select id="phv-upsell-accepted">
+            <option value="">—</option>
+            <option value="Yes">Yes ✓</option>
+            <option value="No">No</option>
+            <option value="Thinking About It">Thinking About It</option>
+          </select>
+        </div>
+      </div>
       <div class="ph-modal-btns">
         <button class="ph-action-btn ph-btn-outline" onclick="document.getElementById('ph-modal-visit').style.display='none'">Cancel</button>
         <button id="phv-save-btn" class="ph-action-btn ph-btn-primary" onclick="phSaveVisit()">Save Visit</button>
@@ -735,6 +758,27 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
 <!-- MODE 4: LEAD QUALIFIER (CHAT)                           -->
 <!-- ═══════════════════════════════════════════════════════ -->
 <div id="mode-qualify" class="mode-panel">
+
+  <div class="docs-tab-row" style="margin-bottom:16px;">
+    <div class="docs-tab active" id="lqtab-qualify" onclick="lqSwitchSub('qualify',this)">Qualify Lead</div>
+    <div class="docs-tab" id="lqtab-touchup" onclick="lqSwitchSub('touchup',this)">Daily Touch-up Tasks</div>
+  </div>
+
+  <div id="lq-sub-touchup" style="display:none;">
+    <div class="section" style="margin-bottom:14px;">
+      <div class="section-title">Daily Touch-up Assignments — <span id="tu-today"></span></div>
+      <div class="section-sub">Check patients due for their next treatment. Confirm they're scheduled — if not, reach out today.</div>
+      <div id="tu-summary" style="margin:10px 0;font-size:13px;color:var(--plum);font-weight:600;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="ph-action-btn ph-btn-outline" onclick="tuRender()">&#8635; Refresh</button>
+        <button class="ph-action-btn ph-btn-gold" onclick="tuSyncToSheet()">&#8593; Sync to Sheet</button>
+        <span id="tu-sync-status" style="font-size:11px;color:var(--warm-gray);font-style:italic;align-self:center;"></span>
+      </div>
+    </div>
+    <div id="tu-list"></div>
+  </div>
+
+  <div id="lq-sub-qualify">
 
   <!-- Context bar (collapses after first message) -->
   <div id="lq-setup" class="section" style="margin-bottom:14px;">
@@ -816,6 +860,8 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
     </div>
   </div>
 
+  </div><!-- end lq-sub-qualify -->
+
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -873,6 +919,33 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
   </div>
   <div id="huddle-status" style="font-size:12px;color:var(--warm-gray);font-style:italic;margin-bottom:10px;"></div>
   <div id="huddle-body"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- MODE 7: OWNER DASHBOARD                                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="mode-owner" class="mode-panel">
+  <div id="owner-lock" class="section" style="max-width:380px;margin:40px auto;text-align:center;">
+    <div class="section-title">&#x1F451; Owner Dashboard</div>
+    <div class="section-sub">Enter owner PIN to continue.</div>
+    <div class="form-group" style="margin-bottom:12px;"><input id="owner-pin-input" type="password" inputmode="numeric" placeholder="PIN" style="text-align:center;letter-spacing:4px;font-size:18px;" onkeydown="if(event.key==='Enter')ownerUnlock()"/></div>
+    <button class="ph-action-btn ph-btn-primary" style="width:100%;" onclick="ownerUnlock()">Unlock</button>
+    <div id="owner-pin-err" style="font-size:12px;color:var(--red);margin-top:8px;height:14px;"></div>
+  </div>
+  <div id="owner-dash" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div class="section-title" style="margin-bottom:0;">&#x1F451; Owner Dashboard</div>
+      <button class="ph-action-btn ph-btn-outline" onclick="ownerLock()">&#x1F512; Lock</button>
+    </div>
+    <div id="owner-content"></div>
+  </div>
+  <!-- Provider card modal -->
+  <div id="owner-card-modal" class="ph-modal-overlay" style="display:none;">
+    <div class="ph-modal">
+      <button class="ph-modal-close" onclick="document.getElementById('owner-card-modal').style.display='none'">&#10005;</button>
+      <div id="owner-card-body"></div>
+    </div>
+  </div>
 </div>
 
 </div><!-- end main -->
@@ -1745,10 +1818,11 @@ function phSaveVisit(){
   const treatments=document.getElementById('phv-treatments').value.trim();
   if(!treatments){alert('Treatments required.');return;}
   const visits=phGetVisits();
-  const v={id:phUID(),patientId:phCurrentPatientId,visitDate:document.getElementById('phv-date').value,treatments:treatments,products:document.getElementById('phv-products').value.trim(),injector:document.getElementById('phv-injector').value,total:document.getElementById('phv-total').value,payment:document.getElementById('phv-payment').value,notes:document.getElementById('phv-notes').value.trim(),createdAt:new Date().toISOString()};
+  const v={id:phUID(),patientId:phCurrentPatientId,visitDate:document.getElementById('phv-date').value,treatments:treatments,products:document.getElementById('phv-products').value.trim(),injector:document.getElementById('phv-injector').value,total:document.getElementById('phv-total').value,payment:document.getElementById('phv-payment').value,notes:document.getElementById('phv-notes').value.trim(),upsellOffered:document.getElementById('phv-upsell-offered').value,upsellAccepted:document.getElementById('phv-upsell-accepted').value,createdAt:new Date().toISOString()};
   visits.push(v);phSaveVisits(visits);phSyncVisitToSheet(v);
   document.getElementById('ph-modal-visit').style.display='none';
   ['phv-treatments','phv-products','phv-total','phv-notes'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('phv-upsell-offered').value='';document.getElementById('phv-upsell-accepted').value='';
   phRenderDetail(phCurrentPatientId);
 }
 
@@ -1760,7 +1834,7 @@ function phDeletePatient(id){
 }
 
 async function phSyncPatientToSheet(p){try{await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'Patients',values:[[p.id,p.fname,p.lname,p.dob,p.phone,p.email,p.membership,p.notes,p.createdAt]]})});}catch(e){}}
-async function phSyncVisitToSheet(v){try{await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'Visits',values:[[v.id,v.patientId,v.visitDate,v.treatments,v.products,v.injector,v.total,v.payment,v.notes,v.createdAt]]})});}catch(e){}}
+async function phSyncVisitToSheet(v){try{await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'Visits',values:[[v.id,v.patientId,v.visitDate,v.treatments,v.products,v.injector,v.total,v.payment,v.notes,v.createdAt,v.upsellOffered||'',v.upsellAccepted||'']]})});}catch(e){}}
 
 // ── SYNC FROM SHEET (pull other devices' data) ────────────────────────────────
 async function phSyncFromSheet(manual){
@@ -1769,7 +1843,7 @@ async function phSyncFromSheet(manual){
   try{
     const [pr,vr]=await Promise.all([
       fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Patients!A:I'})}),
-      fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Visits!A:J'})})
+      fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Visits!A:L'})})
     ]);
     const pd=await pr.json();const vd=await vr.json();
     let added=0;
@@ -1789,7 +1863,7 @@ async function phSyncFromSheet(manual){
       const toAdd=[];
       for(const row of vd.result.values){
         if(!row[0]||row[0]==='id'||row[0]==='ID'||ids.has(row[0]))continue;
-        toAdd.push({id:row[0],patientId:row[1]||'',visitDate:row[2]||'',treatments:row[3]||'',products:row[4]||'',injector:row[5]||'Anna',total:row[6]||0,payment:row[7]||'',notes:row[8]||'',createdAt:row[9]||''});
+        toAdd.push({id:row[0],patientId:row[1]||'',visitDate:row[2]||'',treatments:row[3]||'',products:row[4]||'',injector:row[5]||'Anna',total:row[6]||0,payment:row[7]||'',notes:row[8]||'',createdAt:row[9]||'',upsellOffered:row[10]||'',upsellAccepted:row[11]||''});
         added++;
       }
       if(toAdd.length)phSaveVisits(existing.concat(toAdd));
@@ -1811,7 +1885,7 @@ async function phFullReload(){
   try{
     const [pr,vr]=await Promise.all([
       fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Patients!A:I'})}),
-      fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Visits!A:J'})})
+      fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',sheetId:SHEET_ID,range:'Visits!A:L'})})
     ]);
     const pd=await pr.json();const vd=await vr.json();
     if(pd.ok&&pd.result&&pd.result.values){
@@ -1826,7 +1900,7 @@ async function phFullReload(){
       const visits=[];
       for(const row of vd.result.values){
         if(!row[0]||row[0]==='id'||row[0]==='ID')continue;
-        visits.push({id:row[0],patientId:row[1]||'',visitDate:row[2]||'',treatments:row[3]||'',products:row[4]||'',injector:row[5]||'Anna',total:row[6]||0,payment:row[7]||'',notes:row[8]||'',createdAt:row[9]||''});
+        visits.push({id:row[0],patientId:row[1]||'',visitDate:row[2]||'',treatments:row[3]||'',products:row[4]||'',injector:row[5]||'Anna',total:row[6]||0,payment:row[7]||'',notes:row[8]||'',createdAt:row[9]||'',upsellOffered:row[10]||'',upsellAccepted:row[11]||''});
       }
       phSaveVisits(visits);
     }
@@ -1898,6 +1972,8 @@ function phOpenEditVisit(id){
   document.getElementById('phv-total').value=v.total||'';
   document.getElementById('phv-payment').value=v.payment||'Card';
   document.getElementById('phv-notes').value=v.notes||'';
+  document.getElementById('phv-upsell-offered').value=v.upsellOffered||'';
+  document.getElementById('phv-upsell-accepted').value=v.upsellAccepted||'';
   document.getElementById('ph-modal-visit').style.display='flex';
 }
 
@@ -1913,6 +1989,8 @@ function phUpdateVisit(){
   visits[idx].total=document.getElementById('phv-total').value;
   visits[idx].payment=document.getElementById('phv-payment').value;
   visits[idx].notes=document.getElementById('phv-notes').value.trim();
+  visits[idx].upsellOffered=document.getElementById('phv-upsell-offered').value;
+  visits[idx].upsellAccepted=document.getElementById('phv-upsell-accepted').value;
   phSaveVisits(visits);
   document.getElementById('ph-modal-visit').style.display='none';
   phEditingVisitId=null;
