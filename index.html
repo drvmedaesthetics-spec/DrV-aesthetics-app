@@ -1165,6 +1165,7 @@ function ownerComputeProviders(visits, monthR) {
 }
 
 function ownerRenderDash() {
+  try {
   const visits = phGetVisits();
   const patients = phGetPatients();
   const weekR = ownerWeekRange();
@@ -1273,6 +1274,9 @@ function ownerRenderDash() {
 
   document.getElementById('owner-content').innerHTML = html;
   window._ownerProvNames = provNames;
+  } catch(e) {
+    document.getElementById('owner-content').innerHTML = '<div class="section" style="color:var(--red);"><strong>Dashboard error:</strong> '+e.message+'<br><small>'+e.stack+'</small></div>';
+  }
 }
 
 function ownerSaveSettings() {
