@@ -960,6 +960,383 @@ function switchMode(mode, el) {
   if (mode === 'settings') renderPricingForm();
   if (mode === 'history') phSyncFromSheet(false);
   if (mode === 'huddle') huddleInit();
+  if (mode === 'owner') ownerInit();
+  if (mode === 'qualify' && window._lqSub === 'touchup') tuRender();
+}
+
+// ─── LEAD QUALIFIER SUB-NAV ───────────────────────────────
+function lqSwitchSub(sub, el) {
+  window._lqSub = sub;
+  document.querySelectorAll('#mode-qualify .docs-tab').forEach(function(t){ t.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  document.getElementById('lq-sub-qualify').style.display = sub === 'qualify' ? 'block' : 'none';
+  document.getElementById('lq-sub-touchup').style.display = sub === 'touchup' ? 'block' : 'none';
+  if (sub === 'touchup') tuRender();
+}
+
+// ─── DAILY TOUCH-UP TASKS ─────────────────────────────────
+function tuTodayStr() { return new Date().toISOString().slice(0,10); }
+function tuGetTasks() { try { return JSON.parse(localStorage.getItem('drv_touchup_tasks')||'{}'); } catch(e){ return {}; } }
+function tuSaveTasks(o) { localStorage.setItem('drv_touchup_tasks', JSON.stringify(o)); }
+
+function tuDueWindow(treatments) {
+  const t = (treatments||'').toLowerCase();
+  let win = null;
+  if (/laser hair|lhr/.test(t)) win = win===null?45:Math.min(win,45);
+  if (/tox|neurotoxin|dysport|xeomin/.test(t)) win = win===null?90:Math.min(win,90);
+  if (/filler|lip filler|cheek|jaw|temple|chin/.test(t)) win = win===null?180:Math.min(win,180);
+  return win;
+}
+
+function tuComputeDue() {
+  const patients = phGetPatients();
+  const visits = phGetVisits();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const out = [];
+  patients.forEach(function(p){
+    const pv = visits.filter(function(v){ return v.patientId===p.id && v.visitDate; })
+      .sort(function(a,b){ return b.visitDate.localeCompare(a.visitDate); });
+    if (!pv.length) return;
+    const last = pv[0];
+    const win = tuDueWindow(last.treatments);
+    if (win===null) return;
+    const dueDate = new Date(last.visitDate); dueDate.setDate(dueDate.getDate()+win); dueDate.setHours(0,0,0,0);
+    const daysToD = Math.round((dueDate - today)/86400000);
+    // include due window: today..+14, or overdue up to 60 days
+    if (daysToD <= 14 && daysToD >= -60) {
+      out.push({ patientId:p.id, name:(p.fname+' '+(p.lname||'')).trim(), lastTreatment:last.treatments||'', lastVisit:last.visitDate, dueDate:dueDate.toISOString().slice(0,10), overdue:daysToD<0 });
+    }
+  });
+  out.sort(function(a,b){ return a.dueDate.localeCompare(b.dueDate); });
+  return out;
+}
+
+function tuTaskFor(patientId) {
+  const all = tuGetTasks();
+  const day = (all[tuTodayStr()] || []);
+  return day.find(function(t){ return t.patientId===patientId; }) || null;
+}
+
+function tuUpsertTask(patientId, patch) {
+  const all = tuGetTasks();
+  const key = tuTodayStr();
+  if (!all[key]) all[key] = [];
+  let rec = all[key].find(function(t){ return t.patientId===patientId; });
+  if (!rec) { rec = { patientId:patientId, date:key, scheduled:false, contacted:false, completedBy:'' }; all[key].push(rec); }
+  Object.assign(rec, patch);
+  tuSaveTasks(all);
+  return rec;
+}
+
+function tuRender() {
+  const el = document.getElementById('tu-list');
+  if (!el) return;
+  document.getElementById('tu-today').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const due = tuComputeDue();
+  let scheduled=0, needOutreach=0;
+  due.forEach(function(d){ const t=tuTaskFor(d.patientId); if(t&&t.scheduled)scheduled++; else needOutreach++; });
+  document.getElementById('tu-summary').textContent = due.length + ' patients due · ' + scheduled + ' scheduled · ' + needOutreach + ' need outreach';
+  if (!due.length) { el.innerHTML = '<div class="ph-empty">No patients due for touch-up in the next 14 days.</div>'; return; }
+  el.innerHTML = due.map(function(d){
+    const t = tuTaskFor(d.patientId);
+    const isSched = t && t.scheduled;
+    const isContacted = t && t.contacted;
+    let badge;
+    if (isSched) badge = '<span class="out-badge badge-green">Scheduled &#x2713;</span>';
+    else if (isContacted) badge = '<span class="out-badge badge-blue">Contacted'+(t.completedBy?' &middot; '+t.completedBy:'')+'</span>';
+    else badge = '<span class="out-badge badge-gold">Action Needed</span>';
+    const overdueTag = d.overdue ? '<span class="out-badge badge-red" style="margin-left:6px;">Overdue</span>' : '';
+    return '<div class="ph-patient-card" style="flex-direction:column;align-items:stretch;cursor:default;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
+      + '<div><div class="ph-patient-name">'+d.name+'</div>'
+      + '<div class="ph-patient-meta">'+d.lastTreatment+'</div>'
+      + '<div class="ph-patient-meta">Last visit: '+d.lastVisit+' &middot; Due: '+d.dueDate+'</div></div>'
+      + '<div style="text-align:right;">'+badge+overdueTag+'</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">'
+      + '<button class="ph-action-btn '+(isSched?'ph-btn-primary':'ph-btn-outline')+'" style="font-size:10px;padding:5px 12px;'+(isSched?'background:var(--green);color:#fff;':'')+'" onclick="tuToggleScheduled(\''+d.patientId+'\')">'+(isSched?'&#x2713; Scheduled':'Already Scheduled')+'</button>'
+      + (isSched?'':'<button class="ph-action-btn ph-btn-outline" style="font-size:10px;padding:5px 12px;" onclick="tuShowContact(\''+d.patientId+'\')">Mark Contacted</button>')
+      + '<span id="tu-contact-'+d.patientId+'" style="display:none;align-items:center;gap:6px;">'
+      + '<select id="tu-by-'+d.patientId+'" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"><option value="Julianne">Julianne</option><option value="Andrea">Andrea</option><option value="Other">Other</option></select>'
+      + '<button class="ph-action-btn ph-btn-primary" style="font-size:10px;padding:5px 10px;" onclick="tuSaveContact(\''+d.patientId+'\')">Save</button>'
+      + '</span>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function tuToggleScheduled(pid) {
+  const t = tuTaskFor(pid);
+  tuUpsertTask(pid, { scheduled: !(t && t.scheduled) });
+  tuRender();
+}
+function tuShowContact(pid) {
+  const s = document.getElementById('tu-contact-'+pid);
+  if (s) s.style.display = s.style.display==='none'?'inline-flex':'none';
+}
+function tuSaveContact(pid) {
+  const by = document.getElementById('tu-by-'+pid).value;
+  tuUpsertTask(pid, { contacted:true, completedBy:by });
+  tuRender();
+}
+
+async function tuSyncToSheet() {
+  const status = document.getElementById('tu-sync-status');
+  status.textContent = '⟳ Syncing…';
+  const due = tuComputeDue();
+  const today = tuTodayStr();
+  const rows = due.map(function(d){
+    const t = tuTaskFor(d.patientId) || {};
+    return [today, d.patientId, d.name, d.dueDate, d.lastTreatment, t.scheduled?'Y':'N', t.contacted?'Y':'N', t.completedBy||''];
+  });
+  if (!rows.length) { status.textContent = 'Nothing to sync.'; setTimeout(function(){status.textContent='';},3000); return; }
+  try {
+    await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'TouchupTasks',values:rows})});
+    status.textContent = '✓ Synced '+rows.length+' tasks';
+  } catch(e) { status.textContent = '✗ Sync failed'; }
+  setTimeout(function(){status.textContent='';},4000);
+}
+
+// ─── OWNER DASHBOARD ──────────────────────────────────────
+function ownerGetPin(){ return localStorage.getItem('drv_owner_pin') || '2580'; }
+function ownerJSON(key){ try { return JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){ return {}; } }
+let _ownerUnlocked = false;
+
+function ownerInit() {
+  if (_ownerUnlocked) { ownerRenderDash(); }
+  else {
+    document.getElementById('owner-lock').style.display='block';
+    document.getElementById('owner-dash').style.display='none';
+    document.getElementById('owner-pin-input').value='';
+    document.getElementById('owner-pin-err').textContent='';
+  }
+}
+function ownerUnlock() {
+  const v = document.getElementById('owner-pin-input').value.trim();
+  if (v === ownerGetPin()) {
+    _ownerUnlocked = true;
+    document.getElementById('owner-lock').style.display='none';
+    document.getElementById('owner-dash').style.display='block';
+    ownerRenderDash();
+  } else {
+    document.getElementById('owner-pin-err').textContent='Incorrect PIN';
+  }
+}
+function ownerLock() {
+  _ownerUnlocked = false;
+  ownerInit();
+}
+
+function ownerMonthRange() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  return { start:start, end:end };
+}
+function ownerWeekRange() {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMon = day===0 ? -6 : 1-day;
+  const mon = new Date(now); mon.setDate(now.getDate()+diffToMon); mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+  return { start:mon, end:sun };
+}
+function ownerInRange(dateStr, r) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr); if (isNaN(d.getTime())) return false;
+  return d >= r.start && d <= r.end;
+}
+function ownerAmt(v){ return parseFloat(v.total)||0; }
+
+function ownerComputeProviders(visits, monthR) {
+  const map = {};
+  visits.forEach(function(v){
+    if (!ownerInRange(v.visitDate, monthR)) return;
+    const inj = (v.injector||'Unknown').trim() || 'Unknown';
+    if (!map[inj]) map[inj] = { name:inj, revenue:0, patients:new Set() };
+    map[inj].revenue += ownerAmt(v);
+    if (v.patientId) map[inj].patients.add(v.patientId);
+  });
+  return Object.keys(map).map(function(k){
+    const m = map[k];
+    const count = m.patients.size;
+    return { name:m.name, revenue:m.revenue, count:count, avg: count?Math.round(m.revenue/count):0 };
+  }).sort(function(a,b){ return b.revenue-a.revenue; });
+}
+
+function ownerRenderDash() {
+  const visits = phGetVisits();
+  const patients = phGetPatients();
+  const weekR = ownerWeekRange();
+  const monthR = ownerMonthRange();
+  const fmt = function(n){ return '$'+Math.round(n).toLocaleString(); };
+
+  const weekRev = visits.filter(function(v){ return ownerInRange(v.visitDate, weekR); }).reduce(function(s,v){ return s+ownerAmt(v); },0);
+  const monthRev = visits.filter(function(v){ return ownerInRange(v.visitDate, monthR); }).reduce(function(s,v){ return s+ownerAmt(v); },0);
+  const wt = parseFloat(localStorage.getItem('drv_huddle_weekly_target'))||20000;
+  const gap = wt - weekRev;
+  const newPts = patients.filter(function(p){ return p.createdAt && ownerInRange(p.createdAt.slice(0,10), monthR); }).length;
+
+  function stat(label, val, color){ return '<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 16px;">'
+    + '<div style="font-size:11px;color:var(--mauve);font-weight:600;text-transform:uppercase;letter-spacing:.06em;">'+label+'</div>'
+    + '<div style="font-size:20px;font-weight:700;color:'+(color||'var(--plum)')+';font-family:\'Cormorant Garamond\',serif;margin-top:4px;">'+val+'</div></div>'; }
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px;">'
+    + stat('Weekly Revenue', fmt(weekRev), 'var(--plum)')
+    + stat('Monthly Revenue', fmt(monthRev), 'var(--gold)')
+    + stat('Weekly Target Gap', gap>0?('<span style="color:var(--red);">'+fmt(gap)+' to go</span>'):'<span style="color:var(--green);">On track &#x2713;</span>')
+    + stat('New Patients (mo)', newPts, 'var(--mauve)')
+    + '</div>';
+
+  // Provider leaderboard
+  const provs = ownerComputeProviders(visits, monthR);
+  html += '<div class="section"><div class="section-title">Provider Leaderboard</div><div class="section-sub">This month, by revenue.</div>';
+  if (!provs.length) html += '<div class="ph-empty" style="padding:20px;">No visits this month.</div>';
+  else {
+    html += '<table class="ph-visit-table"><thead><tr><th>Provider</th><th>Revenue</th><th>Patients</th><th>Avg Ticket</th><th></th></tr></thead><tbody>';
+    provs.forEach(function(p){
+      html += '<tr><td style="font-weight:600;">'+p.name+'</td><td>'+fmt(p.revenue)+'</td><td>'+p.count+'</td><td>'+fmt(p.avg)+'</td>'
+        + '<td><button class="ph-action-btn ph-btn-outline" style="font-size:10px;padding:4px 10px;" onclick="ownerOpenCard(\''+encodeURIComponent(p.name)+'\')">View Card</button></td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '</div>';
+
+  // Top services
+  const svcDefs = [
+    {label:'Tox / Neurotoxin', re:/tox|neurotoxin|botox|dysport|xeomin/i},
+    {label:'Filler', re:/filler/i},
+    {label:'Lip', re:/lip/i},
+    {label:'Cheek', re:/cheek/i},
+    {label:'Jaw', re:/jaw/i},
+    {label:'Skincare / ZO', re:/skincare|\bzo\b/i},
+    {label:'Membership', re:/membership/i},
+    {label:'Laser', re:/laser/i},
+    {label:'Tattoo', re:/tattoo/i},
+    {label:'Microneedling', re:/microneedling/i},
+    {label:'IV', re:/\biv\b/i},
+  ];
+  const counts = svcDefs.map(function(s){ return {label:s.label, n:0}; });
+  visits.filter(function(v){ return ownerInRange(v.visitDate, monthR); }).forEach(function(v){
+    const t = v.treatments||'';
+    svcDefs.forEach(function(s,i){ if (s.re.test(t)) counts[i].n++; });
+  });
+  const topSvc = counts.filter(function(c){ return c.n>0; }).sort(function(a,b){ return b.n-a.n; }).slice(0,5);
+  const maxN = topSvc.length ? topSvc[0].n : 1;
+  html += '<div class="section"><div class="section-title">Top Services This Month</div>';
+  if (!topSvc.length) html += '<div class="ph-empty" style="padding:20px;">No services logged.</div>';
+  else html += topSvc.map(function(c){
+    const w = Math.round(c.n/maxN*100);
+    return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>'+c.label+'</span><span style="font-weight:700;">'+c.n+'</span></div>'
+      + '<div style="background:var(--cream);border-radius:6px;height:14px;overflow:hidden;"><div style="width:'+w+'%;height:100%;background:linear-gradient(135deg,var(--mauved),var(--plum));"></div></div></div>';
+  }).join('');
+  html += '</div>';
+
+  // Active memberships
+  const members = patients.filter(function(p){ return p.membership && p.membership!=='None' && p.membership!==''; });
+  const memTypes = {};
+  members.forEach(function(p){ memTypes[p.membership]=(memTypes[p.membership]||0)+1; });
+  html += '<div class="section"><div class="section-title">Active Memberships</div>'
+    + '<div style="font-size:24px;font-weight:700;color:var(--gold);font-family:\'Cormorant Garamond\',serif;margin-bottom:8px;">'+members.length+'</div>'
+    + (Object.keys(memTypes).length ? Object.keys(memTypes).map(function(k){ return '<span class="out-badge badge-gold" style="margin:2px;">'+k+': '+memTypes[k]+'</span>'; }).join('') : '<div class="section-sub">No active memberships.</div>')
+    + '</div>';
+
+  // Upsell conversion
+  const monthVisits = visits.filter(function(v){ return ownerInRange(v.visitDate, monthR); });
+  const offered = monthVisits.filter(function(v){ return v.upsellOffered && v.upsellOffered!==''; });
+  const accepted = offered.filter(function(v){ return v.upsellAccepted==='Yes'; });
+  const conv = offered.length ? Math.round(accepted.length/offered.length*100) : 0;
+  html += '<div class="section"><div class="section-title">Upsell Conversion (This Month)</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">'
+    + stat('Offered', offered.length) + stat('Accepted', accepted.length, 'var(--green)') + stat('Conversion', conv+'%', 'var(--gold)')
+    + '</div></div>';
+
+  // Settings
+  const provNames = provs.map(function(p){ return p.name; });
+  const pins = ownerJSON('drv_injector_pins');
+  const hours = ownerJSON('drv_injector_hours');
+  const goals = ownerJSON('drv_injector_goals');
+  Object.keys(pins).concat(Object.keys(hours)).concat(Object.keys(goals)).forEach(function(n){ if(provNames.indexOf(n)<0)provNames.push(n); });
+  html += '<div class="section"><div class="section-title">Owner Settings</div><div class="section-sub">Set per-injector PINs, estimated hours this month, and bonus goals.</div>';
+  html += '<div class="form-group" style="margin-bottom:14px;"><label>Owner PIN</label><input id="owner-set-pin" value="'+ownerGetPin()+'" style="max-width:160px;"/></div>';
+  html += '<table class="ph-visit-table"><thead><tr><th>Injector</th><th>PIN</th><th>Hours (mo)</th><th>Bonus Goal $</th></tr></thead><tbody>';
+  provNames.forEach(function(n){
+    const safe = n.replace(/[^A-Za-z0-9]/g,'_');
+    html += '<tr><td style="font-weight:600;">'+n+'</td>'
+      + '<td><input id="oset-pin-'+safe+'" data-name="'+encodeURIComponent(n)+'" value="'+(pins[n]||'')+'" style="width:80px;"/></td>'
+      + '<td><input id="oset-hrs-'+safe+'" data-name="'+encodeURIComponent(n)+'" type="number" value="'+(hours[n]||'')+'" style="width:80px;"/></td>'
+      + '<td><input id="oset-goal-'+safe+'" data-name="'+encodeURIComponent(n)+'" type="number" value="'+(goals[n]||'')+'" style="width:100px;"/></td></tr>';
+  });
+  html += '</tbody></table>';
+  html += '<button class="ph-action-btn ph-btn-primary" style="margin-top:12px;" onclick="ownerSaveSettings()">Save Settings</button> <span id="owner-set-status" style="font-size:12px;color:var(--green);"></span>';
+  html += '</div>';
+
+  document.getElementById('owner-content').innerHTML = html;
+  window._ownerProvNames = provNames;
+}
+
+function ownerSaveSettings() {
+  const newPin = document.getElementById('owner-set-pin').value.trim();
+  if (newPin) localStorage.setItem('drv_owner_pin', newPin);
+  const pins={}, hours={}, goals={};
+  (window._ownerProvNames||[]).forEach(function(n){
+    const safe = n.replace(/[^A-Za-z0-9]/g,'_');
+    const pe = document.getElementById('oset-pin-'+safe);
+    const he = document.getElementById('oset-hrs-'+safe);
+    const ge = document.getElementById('oset-goal-'+safe);
+    if (pe && pe.value.trim()) pins[n]=pe.value.trim();
+    if (he && he.value.trim()) hours[n]=parseFloat(he.value)||0;
+    if (ge && ge.value.trim()) goals[n]=parseFloat(ge.value)||0;
+  });
+  localStorage.setItem('drv_injector_pins', JSON.stringify(pins));
+  localStorage.setItem('drv_injector_hours', JSON.stringify(hours));
+  localStorage.setItem('drv_injector_goals', JSON.stringify(goals));
+  const s=document.getElementById('owner-set-status'); s.textContent='✓ Saved';
+  setTimeout(function(){s.textContent='';},2500);
+}
+
+function ownerOpenCard(encName) {
+  const name = decodeURIComponent(encName);
+  const pins = ownerJSON('drv_injector_pins');
+  const injPin = pins[name];
+  // Owner already unlocked bypasses; but if a specific injector PIN exists, prompt unless owner.
+  // Owner is unlocked here, so owner sees all. We still support injector self-view via prompt fallback:
+  if (!_ownerUnlocked && injPin) {
+    const entered = prompt('Enter your PIN to view your card:');
+    if (entered !== injPin && entered !== ownerGetPin()) { alert('Incorrect PIN'); return; }
+  }
+  ownerRenderCard(name);
+}
+
+function ownerRenderCard(name) {
+  const visits = phGetVisits();
+  const monthR = ownerMonthRange();
+  const hours = ownerJSON('drv_injector_hours');
+  const goals = ownerJSON('drv_injector_goals');
+  const fmt = function(n){ return '$'+Math.round(n).toLocaleString(); };
+  const mv = visits.filter(function(v){ return (v.injector||'Unknown').trim()===name && ownerInRange(v.visitDate, monthR); });
+  const revenue = mv.reduce(function(s,v){ return s+ownerAmt(v); },0);
+  const ptSet = new Set(); mv.forEach(function(v){ if(v.patientId)ptSet.add(v.patientId); });
+  const count = ptSet.size;
+  const avg = count?Math.round(revenue/count):0;
+  const hrs = parseFloat(hours[name])||0;
+  const rph = hrs?Math.round(revenue/hrs):0;
+  const goal = parseFloat(goals[name])||0;
+  const prog = goal?Math.min(100,Math.round(revenue/goal*100)):0;
+
+  function stat(label,val,color){ return '<div style="background:var(--cream);border-radius:8px;padding:10px 14px;text-align:center;"><div style="font-size:10px;color:var(--mauve);text-transform:uppercase;letter-spacing:.05em;font-weight:600;">'+label+'</div><div style="font-size:18px;font-weight:700;color:'+(color||'var(--plum)')+';font-family:\'Cormorant Garamond\',serif;margin-top:3px;">'+val+'</div></div>'; }
+
+  let html = '<div class="ph-modal-title">'+name+' — This Month</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px;">'
+    + stat('Revenue', fmt(revenue), 'var(--gold)')
+    + stat('Patients', count)
+    + stat('Avg Ticket', fmt(avg))
+    + stat('RPH', hrs?fmt(rph):'set hours')
+    + '</div>';
+  html += '<div style="margin-top:6px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>Bonus Goal Progress</span><span style="font-weight:700;">'+(goal?fmt(revenue)+' / '+fmt(goal)+' ('+prog+'%)':'no goal set')+'</span></div>'
+    + '<div style="background:var(--cream);border-radius:8px;height:18px;overflow:hidden;"><div style="width:'+prog+'%;height:100%;background:linear-gradient(135deg,var(--gold),var(--gold-light));"></div></div></div>';
+  document.getElementById('owner-card-body').innerHTML = html;
+  document.getElementById('owner-card-modal').style.display='flex';
 }
 
 // ─── PRICING ENGINE ──────────────────────────────────────
