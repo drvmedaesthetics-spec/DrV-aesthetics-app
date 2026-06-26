@@ -1187,18 +1187,69 @@ Start today (Phase 1): $X
 [2-3 most likely objections with honest, non-pushy reframes]
 
 ## In-room upsell
-RULES — only include this section if there is a genuine clinical reason based on the patient's stated concerns, flags, or what they are already getting today. Do NOT fabricate a need. If nothing fits, write "None today — plan is complete for this visit."
-If there IS a real opportunity, write ONE add-on maximum using this format:
+RULES — Only include if there is a real, specific reason from one of these sources (priority order):
+1. PREVIOUSLY DISCUSSED notes: if the history shows the injector discussed a service before but patient didn't convert — this is the strongest signal, reference it directly
+2. REPEAT BEHAVIOR: if patient keeps coming for the same tox with no membership — bring up the membership value naturally
+3. SKINCARE GAP: if patient has never purchased skincare products — ZO is the honest recommendation
+4. CLINICAL COMPLEMENT: if today's treatment has a natural clinical add-on (e.g. lip filler + lip flip, filler + masseter discussed)
+Do NOT fabricate a need. One add-on maximum. If none of the above apply, write: "None today — plan is complete for this visit."
+Format:
 Add-on: [service name] — $[price]
-Why it fits: [one sentence grounded in their concern or today's treatment, e.g. "Patient is getting lip filler — lip flip complements by relaxing the upper lip curl she mentioned"]
-Say this: "[exact words the injector says naturally mid-treatment, first person, warm and conversational — no sales language]"`;
+Signal: [which of the 4 signals above applies and the specific evidence, e.g. "Signal 1 — injector noted 05/12 patient asked about masseter but wasn't ready"]
+Why it fits: [one honest sentence]
+Say this: "[exact words the injector says mid-treatment, warm and first-person — reference the previous conversation if applicable, e.g. 'Last time we talked about your jaw tension — are you still thinking about that?']"`;
 
+
+  // Build patient history signals if a patient is linked
+  let historyContext = '';
+  if (ptPlanLinkedId) {
+    const allVisits = phGetVisits().filter(function(v){ return v.patientId === ptPlanLinkedId; })
+      .sort(function(a,b){ return b.visitDate.localeCompare(a.visitDate); });
+    const linkedPt = phGetPatients().find(function(x){ return x.id === ptPlanLinkedId; });
+
+    if (allVisits.length) {
+      // Signal 1: skincare purchase history
+      const skincareVisits = allVisits.filter(function(v){ return v.products && v.products.trim(); });
+      const noSkincare = skincareVisits.length === 0;
+      const skincareNote = noSkincare
+        ? 'SKINCARE: Never purchased — no ZO products logged across ' + allVisits.length + ' visit(s).'
+        : 'SKINCARE: Has purchased — products in visits: ' + skincareVisits.map(function(v){ return v.products; }).slice(0,3).join('; ');
+
+      // Signal 2: repeat same service with no membership
+      const toxVisits = allVisits.filter(function(v){ return /tox|botox|dysport|xeomin|neuro|forehead|crow|masseter|lip flip/i.test(v.treatments||''); });
+      const noMember = !linkedPt || !linkedPt.membership || linkedPt.membership === 'None';
+      const repeatToxNoMember = toxVisits.length >= 2 && noMember;
+      const memberNote = repeatToxNoMember
+        ? 'MEMBERSHIP: Not a member but has had ' + toxVisits.length + ' neurotoxin visit(s) — strong membership candidate.'
+        : noMember ? 'MEMBERSHIP: Not a member. ' + allVisits.length + ' total visit(s).'
+        : 'MEMBERSHIP: ' + (linkedPt && linkedPt.membership || 'None');
+
+      // Signal 3: injector notes mentioning future services discussed but not converted
+      const notesWithFollowUp = allVisits
+        .filter(function(v){ return v.notes && /discuss|mention|interest|want|consider|next|follow|maybe|thought about|asked about/i.test(v.notes); })
+        .map(function(v){ return v.visitDate + ': ' + v.notes; });
+      const followUpNote = notesWithFollowUp.length
+        ? 'PREVIOUSLY DISCUSSED (not yet converted):\n' + notesWithFollowUp.slice(0,3).join('\n')
+        : '';
+
+      // Recent visit summary
+      const recentSummary = allVisits.slice(0,3).map(function(v){
+        return v.visitDate + ' — ' + (v.treatments||'unknown') + (v.products?' + '+v.products:'') + (v.notes?' [note: '+v.notes+']':'');
+      }).join('\n');
+
+      historyContext = `\n\nPATIENT HISTORY (${allVisits.length} visits on file):
+${recentSummary}
+${skincareNote}
+${memberNote}
+${followUpNote}`;
+    }
+  }
 
   const msg = `Patient: ${p.name}, ${p.age}yo, ${p.fst}
 Membership: ${p.membership} | Skincare: ${p.skincare}
 Flags: ${p.flags} | Concerns: ${p.concerns}
 Chief: ${p.chief} | Event: ${p.event}
-Notes: ${p.notes}
+Notes: ${p.notes}${historyContext}
 Build the full phased plan.`;
 
   try {
@@ -1219,12 +1270,14 @@ Build the full phased plan.`;
     if (upsellEl && upsellMatch) {
       const upsellText = upsellMatch[1].trim();
       if (upsellText && !upsellText.toLowerCase().startsWith('none')) {
-        const addon   = upsellText.match(/Add-on:\s*(.+)/)?.[1]?.trim() || '';
-        const why     = upsellText.match(/Why it fits:\s*(.+)/)?.[1]?.trim() || '';
-        const sayThis = upsellText.match(/Say this:\s*"?([^"]+)"?/)?.[1]?.trim() || '';
+        const addon    = upsellText.match(/Add-on:\s*(.+)/)?.[1]?.trim() || '';
+        const signal   = upsellText.match(/Signal:\s*(.+)/)?.[1]?.trim() || '';
+        const why      = upsellText.match(/Why it fits:\s*(.+)/)?.[1]?.trim() || '';
+        const sayThis  = upsellText.match(/Say this:\s*"?([^"]+)"?/)?.[1]?.trim() || '';
         upsellEl.innerHTML = (addon ? `<div style="font-weight:700;font-size:13px;color:var(--plum);margin-bottom:4px;">${addon}</div>` : '')
-          + (why ? `<div style="font-size:12px;color:var(--warm-gray);margin-bottom:10px;">Why it fits: ${why}</div>` : '')
-          + (sayThis ? `<div class="script-box">"${sayThis}"<div class="script-note">Say this naturally mid-treatment — warm, not salesy.</div></div>` : '');
+          + (signal ? `<div style="font-size:11px;background:var(--gold-pale);color:var(--amber);border-radius:4px;padding:3px 8px;display:inline-block;margin-bottom:6px;font-weight:600;">Based on: ${signal}</div>` : '')
+          + (why ? `<div style="font-size:12px;color:var(--warm-gray);margin-bottom:10px;margin-top:4px;">${why}</div>` : '')
+          + (sayThis ? `<div class="script-box">"${sayThis}"<div class="script-note">Reference previous conversations when applicable — shows you listen.</div></div>` : '');
       } else {
         upsellEl.innerHTML = `<div style="font-size:13px;color:var(--warm-gray);font-style:italic;">No add-on needed — plan is complete for this visit.</div>`;
       }
