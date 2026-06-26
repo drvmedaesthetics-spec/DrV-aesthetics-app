@@ -28,6 +28,21 @@ export async function onRequestPost(context) {
       const r = await fetch(`${GHL_BASE}/contacts/?locationId=${GHL_LOCATION}&query=${encodeURIComponent(query||'')}&limit=10`, { headers });
       data = await r.json();
 
+    } else if (action === 'create_contact') {
+      const { firstName, lastName, phone, email, tags } = body;
+      const r = await fetch(`${GHL_BASE}/contacts/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ locationId: GHL_LOCATION, firstName, lastName, phone, email, tags: tags || ['Zoë Lead'] }),
+      });
+      data = await r.json();
+
+    } else if (action === 'calendar_slots') {
+      const { calendarId, startDate, endDate } = body;
+      const params = new URLSearchParams({ startDate, endDate, timezone: 'America/New_York' });
+      const r = await fetch(`${GHL_BASE}/calendars/${calendarId}/free-slots?${params}`, { headers });
+      data = await r.json();
+
     } else {
       return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400 });
     }
