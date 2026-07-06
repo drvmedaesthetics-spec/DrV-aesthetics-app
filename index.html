@@ -278,6 +278,7 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
     <button class="mode-btn" onclick="switchMode('qualify',this)">&#x2605; Lead Qualifier</button>
     <button class="mode-btn" onclick="switchMode('settings',this)">&#x2699; Pricing &amp; Packages</button>
     <button class="mode-btn" onclick="switchMode('huddle',this)">&#x1F4CB; Weekly Huddle</button>
+    <button class="mode-btn" onclick="switchMode('eod',this)">&#x2713; EOD Recap</button>
     <button class="mode-btn" onclick="switchMode('owner',this)">&#x1F451; Owner</button>
   </div>
 </div>
@@ -930,6 +931,78 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
+<!-- MODE: EOD RECAP                                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="mode-eod" class="mode-panel">
+  <div class="section">
+    <div class="section-title">End-of-Day Recap</div>
+    <div class="section-sub">Takes 2–3 min. Quick accountability + teaching log — owner reviews async.</div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
+      <div class="form-group" style="margin:0;flex:0 0 auto;">
+        <label>Date</label>
+        <input id="eod-date" type="date" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--cream);color:var(--cocoa);"/>
+      </div>
+      <div class="form-group" style="margin:0;flex:0 0 auto;">
+        <label>Injector</label>
+        <input id="eod-injector" placeholder="Your name" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--cream);color:var(--cocoa);width:140px;"/>
+      </div>
+      <button class="ph-action-btn ph-btn-primary" onclick="eodAddPatient()" style="margin-top:18px;">+ Add Patient</button>
+    </div>
+  </div>
+
+  <div id="eod-patients" style="margin-bottom:14px;"></div>
+
+  <!-- Day-level quick questions -->
+  <div class="section" style="margin-bottom:14px;">
+    <div class="section-title" style="font-size:13px;">Day Overall</div>
+    <!-- Front Desk Checkout Section -->
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+      <div style="font-size:11px;font-weight:700;color:var(--plum);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">&#x1F4B3; Front Desk — Checkout</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Rebook offered at checkout?</div>
+          <div style="display:flex;gap:6px;">
+            <button id="eod-fd-rebook-y" onclick="eodFDChip('rebook','y')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--cream);color:var(--cocoa);">Yes</button>
+            <button id="eod-fd-rebook-n" onclick="eodFDChip('rebook','n')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--cream);color:var(--cocoa);">No</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Review requested?</div>
+          <div style="display:flex;gap:6px;">
+            <button id="eod-fd-review-y" onclick="eodFDChip('review','y')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--cream);color:var(--cocoa);">Yes</button>
+            <button id="eod-fd-review-n" onclick="eodFDChip('review','n')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--cream);color:var(--cocoa);">No</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Membership pitched at checkout?</div>
+          <div style="display:flex;gap:6px;">
+            <button id="eod-fd-member-y" onclick="eodFDChip('member','y')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--cream);color:var(--cocoa);">Yes</button>
+            <button id="eod-fd-member-n" onclick="eodFDChip('member','n')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--cream);color:var(--cocoa);">No</button>
+            <button id="eod-fd-member-na" onclick="eodFDChip('member','na')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--cream);color:var(--cocoa);">N/A</button>
+          </div>
+        </div>
+      </div>
+      <div id="eod-fd-tips" style="margin-top:10px;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:14px;">
+      <div class="form-group" style="margin:0;">
+        <label>Anything that felt hard to handle today?</label>
+        <textarea id="eod-hard" rows="2" placeholder="Objection, awkward moment, clinical question..." style="font-size:12px;padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);resize:none;"></textarea>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label>Win of the day (even small)</label>
+        <textarea id="eod-win" rows="2" placeholder="Patient loved their result, converted a membership, nailed a upsell..." style="font-size:12px;padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);resize:none;"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div id="eod-teaching" style="display:none;margin-bottom:14px;"></div>
+
+  <button class="ph-action-btn ph-btn-gold" onclick="eodSubmit()" style="width:100%;padding:14px;">&#x2713; Submit EOD Recap</button>
+  <div id="eod-status" style="margin-top:10px;font-size:12px;text-align:center;color:var(--warm-gray);"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
 <!-- MODE 7: OWNER DASHBOARD                                  -->
 <!-- ═══════════════════════════════════════════════════════ -->
 <div id="mode-owner" class="mode-panel">
@@ -968,6 +1041,7 @@ function switchMode(mode, el) {
   if (mode === 'settings') renderPricingForm();
   if (mode === 'history') phSyncFromSheet(false);
   if (mode === 'huddle') huddleInit();
+  if (mode === 'eod') eodInit();
   if (mode === 'owner') ownerInit();
   if (mode === 'qualify' && window._lqSub === 'touchup') tuRender();
 }
@@ -1103,6 +1177,262 @@ async function tuSyncToSheet() {
     status.textContent = '✓ Synced '+rows.length+' tasks';
   } catch(e) { status.textContent = '✗ Sync failed'; }
   setTimeout(function(){status.textContent='';},4000);
+}
+
+// ─── EOD RECAP ────────────────────────────────────────────
+const EOD_REASONS = [
+  { val: '', label: '— why not? —' },
+  { val: 'forgot', label: 'I forgot to bring it up' },
+  { val: 'timing', label: 'Felt like wrong timing' },
+  { val: 'not_candidate', label: 'Not a candidate / medical reason' },
+  { val: 'declined_price', label: 'Patient declined — price' },
+  { val: 'declined_fear', label: 'Patient declined — fear/hesitant' },
+  { val: 'declined_thinking', label: 'Patient said "thinking about it"' },
+  { val: 'no_time', label: 'Ran out of time' },
+  { val: 'already_has', label: 'Patient already has it' },
+  { val: 'other', label: 'Other' },
+];
+const EOD_TIPS = {
+  forgot: 'Tip: Start every visit with the plan — "Today we\'re doing X, and I also want to talk about Y." That way nothing gets left behind.',
+  timing: 'Tip: If the moment feels off, plant the seed: "Something to think about for next time — ." Then note it so next visit starts with it.',
+  not_candidate: 'Good call. Document why so the next injector knows without re-screening.',
+  declined_price: 'Tip: Offer Cherry Financing before they leave — "We have 0% APR financing, most patients pay as little as $X/month." Always give them an exit ramp.',
+  declined_fear: 'Tip: Validate first, then educate. "That\'s totally normal — most people feel that way before their first time. What specifically concerns you?" Get the real objection, then address it.',
+  declined_thinking: 'Tip: Don\'t let "thinking about it" go cold. Say "Can I send you a quick summary so you have it handy?" then flag for a follow-up touchup call in 1 week.',
+  no_time: 'Tip: Bring it up while injecting, not at checkout. "While I have you — have you ever thought about your [area]?" Checkout is too late.',
+  already_has: 'Nice — note that so we don\'t re-pitch next time.',
+  other: 'Note what happened so we can review and adjust the approach.',
+};
+
+let _eodPatients = [];
+let _eodNextId = 1;
+
+function eodInit() {
+  const d = document.getElementById('eod-date');
+  if (!d.value) d.value = new Date().toISOString().split('T')[0];
+  const inj = document.getElementById('eod-injector');
+  if (!inj.value) {
+    const rates = JSON.parse(localStorage.getItem('drv_injector_rates')||'{}');
+    const names = Object.keys(rates);
+    if (names.length === 1) inj.value = names[0];
+  }
+  if (!_eodPatients.length) eodAddPatient();
+}
+
+function eodAddPatient() {
+  const id = _eodNextId++;
+  _eodPatients.push({ id: id });
+  eodRender();
+}
+
+function eodRemovePatient(id) {
+  _eodPatients = _eodPatients.filter(function(p){ return p.id !== id; });
+  eodRender();
+}
+
+function eodRender() {
+  const container = document.getElementById('eod-patients');
+  container.innerHTML = _eodPatients.map(function(p, i) {
+    const n = i + 1;
+    return '<div style="border:1px solid var(--border);border-radius:12px;background:var(--white);margin-bottom:10px;overflow:hidden;">'
+      + '<div style="background:var(--cream);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">'
+      + '<span style="font-weight:700;color:var(--plum);font-size:13px;">Patient '+n+'</span>'
+      + (_eodPatients.length>1?'<button onclick="eodRemovePatient('+p.id+')" style="background:none;border:none;color:var(--warm-gray);font-size:16px;cursor:pointer;padding:0;">&#x2715;</button>':'')
+      + '</div>'
+      + '<div style="padding:12px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">'
+      // Patient name
+      + '<div class="form-group" style="margin:0;"><label style="font-size:10px;">Patient Name (optional)</label>'
+      + '<input id="eod-name-'+p.id+'" placeholder="First name or initials" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);"/></div>'
+      // Service done
+      + '<div class="form-group" style="margin:0;"><label style="font-size:10px;">Service done today</label>'
+      + '<input id="eod-svc-'+p.id+'" placeholder="e.g. Dysport forehead, lip filler" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);"/></div>'
+      // Revenue
+      + '<div class="form-group" style="margin:0;"><label style="font-size:10px;">Revenue ($)</label>'
+      + '<input id="eod-rev-'+p.id+'" type="number" placeholder="0" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);"/></div>'
+      + '</div>'
+      // Quick Y/N chips
+      + '<div style="padding:0 14px 10px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;">'
+      + eodChips(p.id, 'skincare', 'ZO Skincare offered?')
+      + eodChips(p.id, 'member', 'Membership offered?')
+      + eodChips(p.id, 'upsell', 'Upsell offered?')
+      + '</div>'
+      // Why not sections (hidden until "No" picked)
+      + '<div id="eod-reasons-'+p.id+'" style="padding:0 14px 12px;display:flex;flex-direction:column;gap:8px;"></div>'
+      + '</div>';
+  }).join('');
+  // Re-attach reason listeners
+  _eodPatients.forEach(function(p) {
+    ['skincare','member','upsell'].forEach(function(key) {
+      const yBtn = document.getElementById('eod-'+key+'-y-'+p.id);
+      const nBtn = document.getElementById('eod-'+key+'-n-'+p.id);
+      if (yBtn) yBtn.onclick = function() { eodToggleChip(p.id, key, 'y'); };
+      if (nBtn) nBtn.onclick = function() { eodToggleChip(p.id, key, 'n'); };
+    });
+  });
+}
+
+function eodChips(pid, key, label) {
+  return '<div style="display:flex;flex-direction:column;gap:4px;min-width:150px;">'
+    + '<div style="font-size:10px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;">'+label+'</div>'
+    + '<div style="display:flex;gap:6px;">'
+    + '<button id="eod-'+key+'-y-'+pid+'" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--cream);color:var(--cocoa);">Yes</button>'
+    + '<button id="eod-'+key+'-n-'+pid+'" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--cream);color:var(--cocoa);">No</button>'
+    + '<button id="eod-'+key+'-na-'+pid+'" onclick="eodToggleChip('+pid+',\''+key+'\',\'na\')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--cream);color:var(--cocoa);">N/A</button>'
+    + '</div></div>';
+}
+
+const _eodState = {};
+function eodToggleChip(pid, key, val) {
+  if (!_eodState[pid]) _eodState[pid] = {};
+  _eodState[pid][key] = val;
+  // Update chip colors
+  ['y','n','na'].forEach(function(v) {
+    const btn = document.getElementById('eod-'+key+'-'+v+'-'+pid);
+    if (!btn) return;
+    const active = v === val;
+    const goodColor = v==='y' ? '#d1fae5' : v==='n' ? '#fee2e2' : '#f3f4f6';
+    const goodBorder = v==='y' ? '#6ee7b7' : v==='n' ? '#fca5a5' : '#d1d5db';
+    const goodText = v==='y' ? '#065f46' : v==='n' ? '#991b1b' : '#6b7280';
+    btn.style.background = active ? goodColor : 'var(--cream)';
+    btn.style.borderColor = active ? goodBorder : 'var(--border)';
+    btn.style.color = active ? goodText : 'var(--cocoa)';
+  });
+  // Show/hide reason row
+  eodRenderReasonRow(pid);
+}
+
+function eodRenderReasonRow(pid) {
+  const state = _eodState[pid] || {};
+  const box = document.getElementById('eod-reasons-'+pid);
+  if (!box) return;
+  let html = '';
+  ['skincare','member','upsell'].forEach(function(key) {
+    if (state[key] !== 'n') return;
+    const labelMap = { skincare:'ZO Skincare', member:'Membership', upsell:'Upsell' };
+    html += '<div style="background:var(--cream);border-radius:8px;padding:8px 12px;border-left:3px solid var(--gold);">'
+      + '<div style="font-size:11px;font-weight:700;color:var(--cocoa);margin-bottom:6px;">'+labelMap[key]+' not offered — why?</div>'
+      + '<select id="eod-why-'+key+'-'+pid+'" onchange="eodShowTip('+pid+')" style="padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--white);color:var(--cocoa);width:100%;">'
+      + EOD_REASONS.map(function(r){ return '<option value="'+r.val+'">'+r.label+'</option>'; }).join('')
+      + '</select>'
+      + '<div id="eod-tip-'+key+'-'+pid+'" style="display:none;margin-top:6px;font-size:11px;color:var(--plum);line-height:1.5;padding:6px 8px;background:var(--gold-pale);border-radius:6px;"></div>'
+      + '</div>';
+  });
+  box.innerHTML = html;
+}
+
+function eodShowTip(pid) {
+  ['skincare','member','upsell'].forEach(function(key) {
+    const sel = document.getElementById('eod-why-'+key+'-'+pid);
+    const tip = document.getElementById('eod-tip-'+key+'-'+pid);
+    if (!sel || !tip) return;
+    const val = sel.value;
+    if (val && EOD_TIPS[val]) {
+      tip.textContent = EOD_TIPS[val];
+      tip.style.display = 'block';
+    } else {
+      tip.style.display = 'none';
+    }
+  });
+}
+
+function eodSubmit() {
+  const date = document.getElementById('eod-date').value;
+  const injector = document.getElementById('eod-injector').value.trim();
+  const hard = document.getElementById('eod-hard').value.trim();
+  const win = document.getElementById('eod-win').value.trim();
+  if (!date || !injector) { alert('Please fill in date and injector name.'); return; }
+
+  const rows = _eodPatients.map(function(p) {
+    const state = _eodState[p.id] || {};
+    const name = (document.getElementById('eod-name-'+p.id)||{}).value||'';
+    const svc = (document.getElementById('eod-svc-'+p.id)||{}).value||'';
+    const rev = (document.getElementById('eod-rev-'+p.id)||{}).value||'';
+    const skincareWhy = state.skincare==='n' ? ((document.getElementById('eod-why-skincare-'+p.id)||{}).value||'') : '';
+    const memberWhy  = state.member==='n'    ? ((document.getElementById('eod-why-member-'+p.id)||{}).value||'')  : '';
+    const upsellWhy  = state.upsell==='n'    ? ((document.getElementById('eod-why-upsell-'+p.id)||{}).value||'')  : '';
+    return {
+      date: date, injector: injector,
+      patient: name, service: svc, revenue: rev,
+      skincareOffered: state.skincare||'', skincareWhy: skincareWhy,
+      memberOffered: state.member||'',    memberWhy: memberWhy,
+      upsellOffered: state.upsell||'',   upsellWhy: upsellWhy,
+    };
+  });
+
+  // Save to localStorage
+  const existing = JSON.parse(localStorage.getItem('drv_eod_recaps')||'[]');
+  rows.forEach(function(r){ existing.push(r); });
+  localStorage.setItem('drv_eod_recaps', JSON.stringify(existing));
+
+  // Sync to Google Sheet
+  eodSyncToSheet(date, injector, rows, hard, win);
+
+  // Show teaching summary
+  eodShowTeaching(rows);
+
+  document.getElementById('eod-status').textContent = 'Recap saved — great work today.';
+  document.getElementById('eod-status').style.color = 'var(--green)';
+}
+
+function eodShowTeaching(rows) {
+  const tips = [];
+  rows.forEach(function(r) {
+    if (r.skincareWhy && EOD_TIPS[r.skincareWhy]) tips.push({ label:'ZO Skincare', tip: EOD_TIPS[r.skincareWhy] });
+    if (r.memberWhy   && EOD_TIPS[r.memberWhy])   tips.push({ label:'Membership',  tip: EOD_TIPS[r.memberWhy] });
+    if (r.upsellWhy   && EOD_TIPS[r.upsellWhy])   tips.push({ label:'Upsell',      tip: EOD_TIPS[r.upsellWhy] });
+  });
+  if (!tips.length) return;
+  const box = document.getElementById('eod-teaching');
+  box.style.display = '';
+  box.innerHTML = '<div class="section"><div class="section-title" style="font-size:13px;">&#x1F4A1; Teaching Points for Today</div>'
+    + tips.map(function(t) {
+        return '<div style="border-left:3px solid var(--gold);padding:8px 12px;margin-top:10px;background:var(--gold-pale);border-radius:0 8px 8px 0;">'
+          + '<div style="font-size:11px;font-weight:700;color:var(--plum);margin-bottom:3px;">'+t.label+'</div>'
+          + '<div style="font-size:12px;color:var(--cocoa);line-height:1.6;">'+t.tip+'</div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+const _eodFDState = {};
+function eodFDChip(key, val) {
+  _eodFDState[key] = val;
+  ['y','n','na'].forEach(function(v) {
+    const btn = document.getElementById('eod-fd-'+key+'-'+v);
+    if (!btn) return;
+    const active = v === val;
+    const goodColor = v==='y' ? '#d1fae5' : v==='n' ? '#fee2e2' : '#f3f4f6';
+    const goodBorder = v==='y' ? '#6ee7b7' : v==='n' ? '#fca5a5' : '#d1d5db';
+    const goodText = v==='y' ? '#065f46' : v==='n' ? '#991b1b' : '#6b7280';
+    btn.style.background = active ? goodColor : 'var(--cream)';
+    btn.style.borderColor = active ? goodBorder : 'var(--border)';
+    btn.style.color = active ? goodText : 'var(--cocoa)';
+  });
+  // FD teaching tips
+  const tips = [];
+  if (_eodFDState.rebook === 'n') tips.push('Rebook: Always offer the next appointment before they leave — "Let\'s go ahead and get your next visit on the books while you\'re here."');
+  if (_eodFDState.review === 'n') tips.push('Review: Ask every patient before they walk out — "We\'d love a quick Google review — it takes 30 seconds and means the world to us."');
+  if (_eodFDState.member === 'n') tips.push('Membership: At checkout say "Did you hear about our membership? It could have saved you $X today."');
+  const box = document.getElementById('eod-fd-tips');
+  if (box) box.innerHTML = tips.map(function(t){
+    return '<div style="border-left:3px solid var(--mauve);padding:6px 10px;margin-top:6px;background:var(--cream);border-radius:0 6px 6px 0;font-size:11px;color:var(--cocoa);line-height:1.5;">'+t+'</div>';
+  }).join('');
+}
+
+function eodSyncToSheet(date, injector, rows, hard, win) {
+  const values = rows.map(function(r) {
+    return [date, injector, r.patient, r.service, r.revenue,
+            r.skincareOffered, r.skincareWhy,
+            r.memberOffered, r.memberWhy,
+            r.upsellOffered, r.upsellWhy,
+            _eodFDState.rebook||'', _eodFDState.review||'', _eodFDState.member||'',
+            hard, win];
+  });
+  fetch('/api/sheets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'append', sheetId: SHEET_ID, tab: 'EOD_Recap', values: values })
+  }).catch(function(){});
 }
 
 // ─── OWNER DASHBOARD ──────────────────────────────────────
