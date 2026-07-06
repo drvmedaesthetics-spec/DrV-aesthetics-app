@@ -986,6 +986,23 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
       </div>
     </div>
 
+    <!-- Andrea's Drive step -->
+    <div class="section" style="margin-bottom:14px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;">
+      <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">&#x1F4CB; Andrea — Step 1: Load This Week's Huddle</div>
+      <div style="font-size:12px;color:#14532d;line-height:1.7;margin-bottom:10px;">
+        Every Thursday &amp; Friday morning before clinic, pull the latest huddle from Drive so the briefing reflects any updates.<br>
+        <strong>How:</strong> Click <em>Refresh &#8635;</em> to see all saved huddles → select today's clinic day huddle → click <em>Load Huddle</em>.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select id="eod-am-drive-sel" style="flex:1;min-width:200px;padding:9px 12px;border:1px solid #86efac;border-radius:8px;font-size:13px;font-family:'Lato',sans-serif;background:#f0fdf4;color:#14532d;">
+          <option value="">— tap Refresh first —</option>
+        </select>
+        <button class="ph-action-btn ph-btn-outline" onclick="eodAMDriveList()" style="padding:10px 14px;border-color:#86efac;color:#166534;" title="Refresh Drive list">&#8635; Refresh</button>
+        <button onclick="eodAMDriveLoad()" style="padding:10px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Load Huddle</button>
+      </div>
+      <div id="eod-am-drive-status" style="margin-top:6px;font-size:11px;color:#166534;font-style:italic;"></div>
+    </div>
+
     <div class="section" style="margin-bottom:14px;">
       <div class="section-title">&#x2600; Morning Briefing — Andrea &amp; Injector review together</div>
       <div class="section-sub">Go through each patient before the day starts. Flag concerns, add prep notes, confirm the game plan. Takes 5 minutes.</div>
@@ -1298,6 +1315,71 @@ function eodAMInit() {
   // Auto-select today if plan exists
   const today = new Date().toISOString().split('T')[0];
   if (keys.indexOf(today) !== -1) { sel.value = today; eodAMLoad(); }
+}
+
+function eodAMDriveList() {
+  const sel = document.getElementById('eod-am-drive-sel');
+  const status = document.getElementById('eod-am-drive-status');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  status.textContent = '';
+  fetch('/api/drive', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'list'})
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    const files = (d && d.files) || [];
+    sel.innerHTML = '<option value="">— ' + (files.length ? 'select a huddle (' + files.length + ' found)' : 'no files in Drive yet') + ' —</option>';
+    files.forEach(function(f) {
+      const opt = document.createElement('option');
+      opt.value = f.id;
+      const dt = f.createdTime ? new Date(f.createdTime).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+      opt.textContent = f.name + (dt ? ' — ' + dt : '');
+      sel.appendChild(opt);
+    });
+    if (files.length) status.textContent = '✓ ' + files.length + ' huddle file' + (files.length !== 1 ? 's' : '') + ' found — select one and click Load Huddle';
+  }).catch(function() {
+    sel.innerHTML = '<option value="">— Drive unavailable —</option>';
+    status.textContent = '✗ Could not reach Drive — check connection';
+  });
+}
+
+function eodAMDriveLoad() {
+  const sel = document.getElementById('eod-am-drive-sel');
+  const status = document.getElementById('eod-am-drive-status');
+  const fileId = sel.value;
+  if (!fileId) { status.textContent = 'Please select a file first, then click Load Huddle.'; return; }
+  status.textContent = '⟳ Downloading huddle from Drive…';
+  fetch('/api/drive', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'download', fileId: fileId})
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (!d || !d.content) { status.textContent = '✗ Could not download — try again'; return; }
+    // Parse and store to localStorage so eodAMLoad can use it
+    const events = huddleParseARCSV(d.content);
+    if (!events.length) { status.textContent = '✗ File loaded but no patient data found'; return; }
+    const dates = events.map(function(ev){ return ev.startTime; }).sort();
+    const weekKey = (function(){
+      const d0 = new Date(dates[0]);
+      const day = d0.getDay();
+      const mon = new Date(d0);
+      mon.setDate(d0.getDate() - (day === 0 ? 6 : day - 1));
+      return mon.toISOString().split('T')[0];
+    })();
+    huddleAppts = events;
+    status.textContent = '✓ Huddle loaded — ' + events.length + ' patients. Scroll down to begin briefing.';
+    // Populate the clinic day selector and auto-load
+    const amSel = document.getElementById('eod-am-sel');
+    const keys = Object.keys(localStorage)
+      .filter(function(k){ return k.startsWith('drv_huddle_plan_'); })
+      .map(function(k){ return k.replace('drv_huddle_plan_',''); })
+      .sort().reverse();
+    if (keys.length) {
+      amSel.innerHTML = '<option value="">— select date —</option>'
+        + keys.map(function(k){ return '<option value="'+k+'">'+k+'</option>'; }).join('');
+      const today = new Date().toISOString().split('T')[0];
+      if (keys.indexOf(today) !== -1) { amSel.value = today; eodAMLoad(); }
+      else if (keys.length) { amSel.value = keys[0]; eodAMLoad(); }
+    }
+  }).catch(function(err) {
+    status.textContent = '✗ Error: ' + err.message;
+  });
 }
 
 function eodAMLoad() {
