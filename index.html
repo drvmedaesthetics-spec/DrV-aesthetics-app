@@ -932,88 +932,113 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
-<!-- MODE: WEEKLY RECAP                                        -->
+<!-- MODE: CLINIC DAY SYSTEM                                  -->
 <!-- ═══════════════════════════════════════════════════════ -->
 <div id="mode-eod" class="mode-panel">
 
-  <!-- Two sub-tabs: Huddle Plan (Mon) and Weekly Recap (Fri/EOW) -->
+  <!-- Phase tabs -->
   <div class="docs-tab-row" style="margin-bottom:0;">
-    <button class="docs-tab active" id="eod-tab-plan" onclick="eodSwitchTab('plan',this)">&#x1F4CB; Huddle Plan</button>
-    <button class="docs-tab" id="eod-tab-recap" onclick="eodSwitchTab('recap',this)">&#x2713; Weekly Recap</button>
+    <button class="docs-tab active" id="eod-tab-plan" onclick="eodSwitchTab('plan',this)">&#x270F; Tue — Huddle Prep</button>
+    <button class="docs-tab" id="eod-tab-am"   onclick="eodSwitchTab('am',this)">&#x2600; AM — Clinic Briefing</button>
+    <button class="docs-tab" id="eod-tab-recap" onclick="eodSwitchTab('recap',this)">&#x2713; After Clinic</button>
   </div>
 
-  <!-- ── HUDDLE PLAN sub-panel ── -->
+  <!-- ══ PHASE 1: OWNER HUDDLE PREP (Tuesday evening) ══ -->
   <div id="eod-sub-plan">
     <div class="section" style="margin-bottom:14px;">
-      <div class="section-title">This Week's Patient Action Plan</div>
-      <div class="section-sub">Fill in at your Monday huddle. For each patient coming in, note what to upsell, convert, or discuss based on their history. Pulls from your patient DB automatically when you type a name.</div>
+      <div class="section-title">&#x270F; Huddle Prep — Owner fills this out Tuesday evening</div>
+      <div class="section-sub">Add each patient coming in. Type a name to pull their history and get automatic action suggestions. Andrea reviews before clinic day.</div>
       <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
-        <div class="form-group" style="margin:0;flex:0 0 auto;">
-          <label>Week of</label>
+        <div class="form-group" style="margin:0;">
+          <label>Clinic date</label>
           <input id="eod-plan-week" type="date" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--cream);color:var(--cocoa);"/>
         </div>
         <button class="ph-action-btn ph-btn-primary" onclick="eodPlanAddRow()" style="margin-top:18px;">+ Add Patient</button>
-        <button class="ph-action-btn ph-btn-outline" onclick="eodPlanAutoSuggest()" style="margin-top:18px;" title="Auto-suggest actions from patient history">&#x2728; Auto-suggest from history</button>
+        <button class="ph-action-btn ph-btn-outline" onclick="eodPlanAutoSuggest()" style="margin-top:18px;">&#x2728; Auto-suggest from history</button>
       </div>
     </div>
     <div id="eod-plan-rows" style="margin-bottom:14px;"></div>
-    <button class="ph-action-btn ph-btn-gold" onclick="eodPlanSave()" style="width:100%;padding:13px;">Save Huddle Plan</button>
+    <button class="ph-action-btn ph-btn-gold" onclick="eodPlanSave()" style="width:100%;padding:13px;">&#x1F4BE; Save Huddle Plan — Andrea will review</button>
     <div id="eod-plan-status" style="margin-top:8px;font-size:12px;text-align:center;color:var(--warm-gray);"></div>
   </div>
 
-  <!-- ── WEEKLY RECAP sub-panel ── -->
+  <!-- ══ PHASE 2: AM CLINIC BRIEFING (Andrea + Injector, morning of) ══ -->
+  <div id="eod-sub-am" style="display:none;">
+    <div class="section" style="margin-bottom:14px;">
+      <div class="section-title">&#x2600; Morning Briefing — Andrea &amp; Injector review together</div>
+      <div class="section-sub">Go through each patient before the day starts. Flag concerns, add prep notes, confirm the game plan. Takes 5 minutes.</div>
+      <div class="form-group" style="margin-top:12px;">
+        <label>Load clinic day plan</label>
+        <select id="eod-am-sel" onchange="eodAMLoad()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--cream);color:var(--cocoa);">
+          <option value="">— select date —</option>
+        </select>
+      </div>
+    </div>
+    <div id="eod-am-body" style="margin-bottom:14px;"></div>
+    <div id="eod-am-concerns-wrap" style="display:none;">
+      <div class="section" style="margin-bottom:14px;">
+        <div class="section-title" style="font-size:13px;">Anything to flag before the day starts?</div>
+        <textarea id="eod-am-flag" rows="2" placeholder="Supply issues, scheduling concern, patient to watch, clinical reminder..." style="font-size:12px;padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);resize:none;margin-top:6px;"></textarea>
+      </div>
+      <button class="ph-action-btn ph-btn-gold" onclick="eodAMSave()" style="width:100%;padding:13px;">&#x2714; Team is ready — start the day</button>
+      <div id="eod-am-status" style="margin-top:8px;font-size:12px;text-align:center;color:var(--warm-gray);"></div>
+    </div>
+  </div>
+
+  <!-- ══ PHASE 3: AFTER-CLINIC REVIEW (Injector + Andrea, end of day) ══ -->
   <div id="eod-sub-recap" style="display:none;">
     <div class="section" style="margin-bottom:14px;">
-      <div class="section-title">Weekly Recap — What Actually Happened?</div>
-      <div class="section-sub">Takes 3–5 min at end of week. Review each planned action item — did it happen? If not, why? Owner reviews async.</div>
-      <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
-        <div class="form-group" style="margin:0;">
-          <label>Week of (load plan)</label>
-          <select id="eod-recap-week-sel" onchange="eodRecapLoadPlan()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--cream);color:var(--cocoa);">
-            <option value="">— select week —</option>
-          </select>
-        </div>
+      <div class="section-title">&#x1F31C; After-Clinic Review — Injector &amp; Andrea</div>
+      <div class="section-sub">Quick debrief after patients are done. Per patient — did the planned action happen? If not, one reason and a tip. Takes 3–5 min total.</div>
+      <div class="form-group" style="margin-top:12px;">
+        <label>Load clinic day</label>
+        <select id="eod-recap-week-sel" onchange="eodRecapLoadPlan()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--cream);color:var(--cocoa);">
+          <option value="">— select date —</option>
+        </select>
       </div>
     </div>
     <div id="eod-recap-items" style="margin-bottom:14px;"></div>
-    <!-- Front desk section -->
+
+    <!-- Front desk checkout questions -->
     <div class="section" style="margin-bottom:14px;" id="eod-fd-section" style="display:none;">
-      <div class="section-title" style="font-size:13px;">&#x1F4B3; Front Desk Checkout — This Week</div>
+      <div class="section-title" style="font-size:13px;">&#x1F4B3; Andrea — Checkout (every patient today)</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:10px;">
         <div>
           <div style="font-size:10px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Rebook offered at every checkout?</div>
           <div style="display:flex;gap:6px;">
-            <button id="eod-fd-rebook-y" onclick="eodFDChip('rebook','y')" class="eod-chip">Always</button>
-            <button id="eod-fd-rebook-s" onclick="eodFDChip('rebook','s')" class="eod-chip">Sometimes</button>
-            <button id="eod-fd-rebook-n" onclick="eodFDChip('rebook','n')" class="eod-chip">Rarely</button>
+            <button id="eod-fd-rebook-y" onclick="eodFDChip('rebook','y')" class="eod-chip">Every time</button>
+            <button id="eod-fd-rebook-s" onclick="eodFDChip('rebook','s')" class="eod-chip">Most</button>
+            <button id="eod-fd-rebook-n" onclick="eodFDChip('rebook','n')" class="eod-chip">Missed some</button>
           </div>
         </div>
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Google review asked at checkout?</div>
+          <div style="font-size:10px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Google review asked today?</div>
           <div style="display:flex;gap:6px;">
-            <button id="eod-fd-review-y" onclick="eodFDChip('review','y')" class="eod-chip">Always</button>
-            <button id="eod-fd-review-s" onclick="eodFDChip('review','s')" class="eod-chip">Sometimes</button>
-            <button id="eod-fd-review-n" onclick="eodFDChip('review','n')" class="eod-chip">Rarely</button>
+            <button id="eod-fd-review-y" onclick="eodFDChip('review','y')" class="eod-chip">Every time</button>
+            <button id="eod-fd-review-s" onclick="eodFDChip('review','s')" class="eod-chip">Most</button>
+            <button id="eod-fd-review-n" onclick="eodFDChip('review','n')" class="eod-chip">Missed some</button>
           </div>
         </div>
       </div>
       <div id="eod-fd-tips" style="margin-top:10px;"></div>
     </div>
-    <!-- Wins & challenges -->
+
+    <!-- Wins + hard moments -->
     <div class="section" style="margin-bottom:14px;">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;">
         <div class="form-group" style="margin:0;">
-          <label>Biggest win this week</label>
-          <textarea id="eod-win" rows="2" placeholder="Converted a membership, patient loved their result..." style="font-size:12px;padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);resize:none;"></textarea>
+          <label>Win of the day</label>
+          <textarea id="eod-win" rows="2" placeholder="Converted a membership, patient thrilled, nailed an upsell..." style="font-size:12px;padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);resize:none;"></textarea>
         </div>
         <div class="form-group" style="margin:0;">
-          <label>What was hardest / where do you need support?</label>
-          <textarea id="eod-hard" rows="2" placeholder="Objection I couldn't answer, clinical question, awkward moment..." style="font-size:12px;padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);resize:none;"></textarea>
+          <label>What felt hard / where do you need support?</label>
+          <textarea id="eod-hard" rows="2" placeholder="Objection I couldn't handle, clinical question, awkward moment..." style="font-size:12px;padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);resize:none;"></textarea>
         </div>
       </div>
     </div>
+
     <div id="eod-teaching" style="display:none;margin-bottom:14px;"></div>
-    <button class="ph-action-btn ph-btn-gold" onclick="eodRecapSubmit()" style="width:100%;padding:13px;">&#x2713; Submit Weekly Recap</button>
+    <button class="ph-action-btn ph-btn-gold" onclick="eodRecapSubmit()" style="width:100%;padding:13px;">&#x2713; Submit — Owner will review</button>
     <div id="eod-status" style="margin-top:8px;font-size:12px;text-align:center;color:var(--warm-gray);"></div>
   </div>
 </div>
@@ -1224,22 +1249,85 @@ const EOD_TIPS = {
 function eodSwitchTab(tab, el) {
   document.querySelectorAll('#mode-eod .docs-tab').forEach(function(t){ t.classList.remove('active'); });
   if (el) el.classList.add('active');
-  document.getElementById('eod-sub-plan').style.display   = tab === 'plan'  ? '' : 'none';
-  document.getElementById('eod-sub-recap').style.display  = tab === 'recap' ? '' : 'none';
+  document.getElementById('eod-sub-plan').style.display  = tab === 'plan'  ? '' : 'none';
+  document.getElementById('eod-sub-am').style.display    = tab === 'am'    ? '' : 'none';
+  document.getElementById('eod-sub-recap').style.display = tab === 'recap' ? '' : 'none';
+  if (tab === 'am')    eodAMInit();
   if (tab === 'recap') eodRecapInit();
 }
 
 function eodInit() {
-  // Default week = Monday of current week
+  // Default date = today
   const el = document.getElementById('eod-plan-week');
-  if (el && !el.value) {
-    const now = new Date();
-    const day = now.getDay();
-    const mon = new Date(now);
-    mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-    el.value = mon.toISOString().split('T')[0];
-  }
+  if (el && !el.value) el.value = new Date().toISOString().split('T')[0];
   if (!document.getElementById('eod-plan-rows').children.length) eodPlanAddRow();
+}
+
+// ── AM BRIEFING ──────────────────────────────────────────
+function eodAMInit() {
+  const sel = document.getElementById('eod-am-sel');
+  if (!sel) return;
+  const keys = Object.keys(localStorage)
+    .filter(function(k){ return k.startsWith('drv_huddle_plan_'); })
+    .map(function(k){ return k.replace('drv_huddle_plan_',''); })
+    .sort().reverse();
+  sel.innerHTML = '<option value="">— select date —</option>'
+    + keys.map(function(k){ return '<option value="'+k+'">'+k+'</option>'; }).join('');
+  // Auto-select today if plan exists
+  const today = new Date().toISOString().split('T')[0];
+  if (keys.indexOf(today) !== -1) { sel.value = today; eodAMLoad(); }
+}
+
+function eodAMLoad() {
+  const key = document.getElementById('eod-am-sel').value;
+  if (!key) return;
+  const plan = JSON.parse(localStorage.getItem('drv_huddle_plan_'+key)||'[]');
+  const body = document.getElementById('eod-am-body');
+  const wrap = document.getElementById('eod-am-concerns-wrap');
+  if (!plan.length) {
+    body.innerHTML = '<div style="padding:20px;color:var(--warm-gray);">No huddle plan found for this date. Owner needs to fill out Tue — Huddle Prep first.</div>';
+    wrap.style.display = 'none';
+    return;
+  }
+  body.innerHTML = plan.map(function(pt) {
+    if (!pt.name) return '';
+    const actionList = (pt.actions||[]).map(function(a){
+      return '<li style="margin-bottom:4px;font-size:12px;color:var(--cocoa);">'+a+'</li>';
+    }).join('');
+    const noteHtml = pt.notes ? '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px;font-style:italic;">Note: '+pt.notes+'</div>' : '';
+    return '<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--white);">'
+      + '<div style="font-weight:700;color:var(--plum);font-size:14px;margin-bottom:6px;">'+pt.name+'</div>'
+      + (actionList ? '<ul style="margin:0 0 0 16px;padding:0;">'+actionList+'</ul>' : '<div style="font-size:12px;color:var(--warm-gray);">No specific action items — standard visit.</div>')
+      + noteHtml
+      + '<div style="margin-top:8px;">'
+      + '<label style="font-size:10px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">AM prep note / concern (optional)</label>'
+      + '<input id="am-note-'+pt.name.replace(/\s/g,'_')+'" placeholder="e.g. patient anxious, check consent, confirm price..." style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);"/>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  wrap.style.display = '';
+}
+
+function eodAMSave() {
+  const key = document.getElementById('eod-am-sel').value;
+  const flag = (document.getElementById('eod-am-flag')||{}).value||'';
+  const plan = JSON.parse(localStorage.getItem('drv_huddle_plan_'+key)||'[]');
+  // Collect per-patient AM notes
+  plan.forEach(function(pt) {
+    if (!pt.name) return;
+    const el = document.getElementById('am-note-'+pt.name.replace(/\s/g,'_'));
+    pt.amNote = el ? el.value.trim() : '';
+  });
+  localStorage.setItem('drv_huddle_plan_'+key, JSON.stringify(plan));
+  // Sync flag to sheet
+  if (flag) {
+    fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'ClinicBriefing',values:[[key,'AM_FLAG',flag]]})
+    }).catch(function(){});
+  }
+  const st = document.getElementById('eod-am-status');
+  st.textContent = 'Briefing saved — have a great clinic day!';
+  st.style.color = 'var(--green)';
 }
 
 // ── HUDDLE PLAN ──────────────────────────────────────────
@@ -1396,16 +1484,17 @@ function eodPlanSave() {
   st.style.color = 'var(--green)';
 }
 
-// ── WEEKLY RECAP ─────────────────────────────────────────
+// ── AFTER-CLINIC RECAP ───────────────────────────────────
 function eodRecapInit() {
   const sel = document.getElementById('eod-recap-week-sel');
   if (!sel) return;
-  // Populate weeks from saved plans
   const keys = Object.keys(localStorage).filter(function(k){ return k.startsWith('drv_huddle_plan_'); })
     .map(function(k){ return k.replace('drv_huddle_plan_',''); }).sort().reverse();
-  sel.innerHTML = '<option value="">— select week —</option>'
-    + keys.map(function(k){ return '<option value="'+k+'">Week of '+k+'</option>'; }).join('');
-  if (keys.length === 1) { sel.value = keys[0]; eodRecapLoadPlan(); }
+  sel.innerHTML = '<option value="">— select date —</option>'
+    + keys.map(function(k){ return '<option value="'+k+'">'+k+'</option>'; }).join('');
+  const today = new Date().toISOString().split('T')[0];
+  if (keys.indexOf(today) !== -1) { sel.value = today; eodRecapLoadPlan(); }
+  else if (keys.length === 1) { sel.value = keys[0]; eodRecapLoadPlan(); }
 }
 
 const _eodRecapState = {};
@@ -1441,7 +1530,8 @@ function eodRecapLoadPlan() {
     return '<div style="border:1px solid var(--border);border-radius:12px;background:var(--white);margin-bottom:12px;">'
       + '<div style="background:var(--cream);padding:10px 14px;border-radius:12px 12px 0 0;">'
       + '<div style="font-weight:700;color:var(--plum);font-size:14px;">'+pt.name+'</div>'
-      + (pt.notes?'<div style="font-size:11px;color:var(--warm-gray);margin-top:2px;">'+pt.notes+'</div>':'')
+      + (pt.notes?'<div style="font-size:11px;color:var(--warm-gray);margin-top:2px;">Owner note: '+pt.notes+'</div>':'')
+      + (pt.amNote?'<div style="font-size:11px;color:var(--mauve);margin-top:2px;font-weight:600;">AM flag: '+pt.amNote+'</div>':'')
       + '</div>'
       + '<div style="padding:12px 14px;">'+actionRows+'</div>'
       + '</div>';
