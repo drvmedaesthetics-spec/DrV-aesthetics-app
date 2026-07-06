@@ -305,10 +305,18 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
         <label>Look Up Existing Patient</label>
         <div style="display:flex;gap:8px;align-items:center;">
           <input id="p-pt-search" placeholder="Type name to search..." oninput="ptPlanSearch()" autocomplete="off" style="flex:1;padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);outline:none;"/>
-          <button class="pbtn" style="padding:8px 14px;font-size:12px;" onclick="document.getElementById('p-pt-results').innerHTML='';document.getElementById('p-pt-search').value='';">Clear</button>
+          <button class="pbtn" style="padding:8px 14px;font-size:12px;" onclick="document.getElementById('p-pt-results').innerHTML='';document.getElementById('p-pt-search').value='';document.getElementById('p-pt-loaded').style.display='none';document.getElementById('p-pt-history').style.display='none';ptPlanLinkedId=null;">Clear</button>
         </div>
         <div id="p-pt-results" style="margin-top:6px;display:flex;flex-direction:column;gap:6px;"></div>
         <div id="p-pt-loaded" style="display:none;margin-top:8px;padding:8px 12px;background:var(--gold-pale);border-radius:8px;font-size:12px;color:var(--amber);font-weight:600;"></div>
+        <!-- Patient history panel — shown after patient is selected -->
+        <div id="p-pt-history" style="display:none;margin-top:10px;border:1px solid var(--border);border-radius:10px;background:var(--white);overflow:hidden;">
+          <div style="padding:10px 14px;background:var(--cream);display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.ph-toggle').textContent=this.nextElementSibling.style.display==='none'?'▶':'▼';">
+            <span style="font-size:12px;font-weight:700;color:var(--plum);text-transform:uppercase;letter-spacing:.05em;">&#x1F4CB; Visit History</span>
+            <span class="ph-toggle" style="font-size:11px;color:var(--warm-gray);">▼</span>
+          </div>
+          <div id="p-pt-history-body" style="padding:12px 14px;font-size:12px;line-height:1.6;color:var(--cocoa);"></div>
+        </div>
       </div>
       <div class="row-grid">
         <div class="form-group"><label>First Name</label><input id="p-fname" placeholder="First name"/></div>
@@ -2651,12 +2659,53 @@ function ptPlanSelectPatient(id){
   document.getElementById('p-pt-results').innerHTML='';
   document.getElementById('p-pt-search').value='';
   document.getElementById('p-pt-loaded').style.display='';
-  document.getElementById('p-pt-loaded').textContent='Linked: '+p.fname+' '+p.lname+(p._fromGHL?' (GHL)':'')+(p.membership&&p.membership!=='None'?' ('+p.membership+')':'');
+  document.getElementById('p-pt-loaded').textContent='Linked: '+p.fname+' '+p.lname+(p._fromGHL?' (GHL)':'')+(p.membership&&p.membership!=='None'?' · '+p.membership:'');
   // Pre-fill form fields from patient record
   document.getElementById('p-fname').value=p.fname;
   if(p.membership&&p.membership!=='None'){
     const ms=document.getElementById('p-membership');
     for(let i=0;i<ms.options.length;i++){if(ms.options[i].value===p.membership){ms.selectedIndex=i;break;}}
+  }
+  // Build visit history panel
+  const histPanel=document.getElementById('p-pt-history');
+  const histBody=document.getElementById('p-pt-history-body');
+  const visits=phGetVisits().filter(function(v){return v.patientId===id;}).sort(function(a,b){return b.visitDate.localeCompare(a.visitDate);});
+  if(visits.length){
+    // Discussed services not yet converted
+    const discussed=visits.filter(function(v){return v.notes&&/discuss|mention|interest|want|consider|next|follow|maybe|thought|asked/i.test(v.notes);});
+    // Tox count for membership signal
+    const toxCount=visits.filter(function(v){return /tox|dysport|xeomin|neuro|forehead|crow|masseter|lip flip/i.test(v.treatments||'');}).length;
+    const noMember=!p.membership||p.membership==='None';
+    let html='';
+    // Membership / upsell signal
+    if(toxCount>=2&&noMember){
+      html+='<div style="background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:6px 10px;margin-bottom:10px;font-weight:600;color:#92400e;">&#x26A1; '+toxCount+' tox visits, no membership — pitch Bank Your Botox or VIP Basic today</div>';
+    }
+    // Previously discussed not converted
+    if(discussed.length){
+      html+='<div style="margin-bottom:8px;"><span style="font-weight:700;color:var(--plum);">Previously discussed (not yet converted):</span><ul style="margin:4px 0 0 16px;padding:0;">';
+      discussed.slice(0,3).forEach(function(v){ html+='<li style="margin-bottom:2px;"><span style="color:var(--warm-gray);">'+v.visitDate+'</span> — '+v.notes+'</li>'; });
+      html+='</ul></div>';
+    }
+    // Skincare note
+    const hasProducts=visits.some(function(v){return v.products&&v.products.trim();});
+    if(!hasProducts){
+      html+='<div style="margin-bottom:8px;color:var(--amber);font-weight:600;">&#x1F4E6; No skincare purchases on record — ZO upsell opportunity</div>';
+    }
+    // Visit table
+    html+='<div style="font-weight:700;color:var(--plum);margin-bottom:4px;">Last '+Math.min(visits.length,5)+' visits:</div>';
+    html+='<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    html+='<thead><tr style="color:var(--warm-gray);text-align:left;border-bottom:1px solid var(--border);"><th style="padding:3px 6px;">Date</th><th style="padding:3px 6px;">Treatment</th><th style="padding:3px 6px;">Products</th><th style="padding:3px 6px;">$</th><th style="padding:3px 6px;">Notes</th></tr></thead><tbody>';
+    visits.slice(0,5).forEach(function(v,i){
+      const bg=i%2===0?'var(--cream)':'var(--white)';
+      html+='<tr style="background:'+bg+';"><td style="padding:4px 6px;white-space:nowrap;">'+v.visitDate+'</td><td style="padding:4px 6px;">'+((v.treatments||'—').slice(0,60))+'</td><td style="padding:4px 6px;">'+((v.products||'—').slice(0,40))+'</td><td style="padding:4px 6px;white-space:nowrap;">'+(v.total?'$'+v.total:'—')+'</td><td style="padding:4px 6px;color:var(--warm-gray);">'+((v.notes||'').slice(0,60))+'</td></tr>';
+    });
+    html+='</tbody></table>';
+    histBody.innerHTML=html;
+    histPanel.style.display='';
+  } else {
+    histBody.innerHTML='<div style="color:var(--warm-gray);">No visits on record for this patient yet. Fill in details manually below.</div>';
+    histPanel.style.display='';
   }
 }
 
