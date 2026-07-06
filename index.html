@@ -924,8 +924,18 @@ body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);mi
           <button class="ph-action-btn ph-btn-outline" onclick="huddleFetchHistory()" style="padding:10px 14px;" title="Refresh list">&#8635;</button>
         </div>
       </div>
+      <div style="flex:1;min-width:220px;">
+        <label style="display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--warm-gray);margin-bottom:6px;font-weight:700;">&#x1F4C1; Drive Archive</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="huddle-drive-select" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'Lato',sans-serif;background:var(--cream);color:var(--cocoa);">
+            <option value="">— load from Drive —</option>
+          </select>
+          <button class="ph-action-btn ph-btn-outline" onclick="huddleDriveList()" style="padding:10px 14px;" title="Refresh Drive list">&#8635;</button>
+          <button class="ph-action-btn ph-btn-primary" onclick="huddleDriveLoad()" style="padding:10px 14px;">Load</button>
+        </div>
+      </div>
     </div>
-    <div style="margin-top:10px;font-size:11px;color:var(--warm-gray);">Export from AR: Reports → Invoices → filter by date → Download CSV &nbsp;|&nbsp; Each upload saves automatically to the Huddles sheet tab.</div>
+    <div style="margin-top:10px;font-size:11px;color:var(--warm-gray);">Export from AR: Reports → Invoices → filter by date → Download CSV &nbsp;|&nbsp; Each upload saves automatically to the Huddles sheet tab &amp; Drive folder.</div>
   </div>
   <div id="huddle-status" style="font-size:12px;color:var(--warm-gray);font-style:italic;margin-bottom:10px;"></div>
   <div id="huddle-body"></div>
@@ -3694,9 +3704,14 @@ function huddleLoadCSV(event, which) {
         mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
         return mon.toISOString().split('T')[0];
       })();
+      // Save CSV to Google Drive huddle folder
+      const driveFilename = 'huddle_' + weekKey + '_' + file.name;
+      fetch('/api/drive', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action:'upload', filename: driveFilename, content: text})
+      }).catch(function(){});
       huddleSaveToSheet(weekKey, label, events).then(function(ok) {
         status.textContent = ok
-          ? '✓ ' + events.length + ' invoices from ' + label + ' — saved to Huddles sheet'
+          ? '✓ ' + events.length + ' invoices from ' + label + ' — saved to Huddles sheet & Drive'
           : '✓ ' + events.length + ' invoices from ' + label + ' (sheet save failed — check connection)';
         huddleFetchHistory(); // refresh the past-weeks dropdown
       });
@@ -3707,6 +3722,49 @@ function huddleLoadCSV(event, which) {
     event.target.value = '';
   };
   reader.readAsText(file);
+}
+
+function huddleDriveList() {
+  const sel = document.getElementById('huddle-drive-select');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  fetch('/api/drive', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'list'})
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    const files = (d && d.files) || [];
+    sel.innerHTML = '<option value="">— ' + (files.length ? files.length + ' files on Drive' : 'no files found') + ' —</option>';
+    files.forEach(function(f) {
+      const opt = document.createElement('option');
+      opt.value = f.id;
+      const dt = f.createdTime ? new Date(f.createdTime).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+      opt.textContent = f.name + (dt ? ' (' + dt + ')' : '');
+      sel.appendChild(opt);
+    });
+  }).catch(function() {
+    sel.innerHTML = '<option value="">— Drive unavailable —</option>';
+  });
+}
+
+function huddleDriveLoad() {
+  const sel = document.getElementById('huddle-drive-select');
+  const fileId = sel.value;
+  if (!fileId) return;
+  const status = document.getElementById('huddle-status');
+  status.textContent = '⟳ Downloading from Drive…';
+  fetch('/api/drive', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'download', fileId: fileId})
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (!d || !d.content) { status.textContent = '✗ Could not download file from Drive'; return; }
+    const events = huddleParseARCSV(d.content);
+    huddleAppts = events;
+    const dates = events.map(function(ev){ return ev.startTime; }).sort();
+    const label = dates.length
+      ? (new Date(dates[0]).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + new Date(dates[dates.length-1]).toLocaleDateString('en-US',{month:'short',day:'numeric'}))
+      : 'Drive file';
+    status.textContent = '✓ Loaded ' + events.length + ' invoices from Drive — ' + label;
+    huddleRender(events, 'this', label);
+  }).catch(function(err) {
+    status.textContent = '✗ Drive load error: ' + err.message;
+  });
 }
 
 function huddleParseARCSV(text) {
