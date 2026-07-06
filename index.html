@@ -1382,6 +1382,68 @@ function eodAMDriveLoad() {
   });
 }
 
+// Cache for daily huddle sheet rows (Julianne's Aspire/wallet data)
+let _huddleSheetRows = null;
+
+function eodAMFetchHuddleSheet(cb) {
+  if (_huddleSheetRows) { cb(_huddleSheetRows); return; }
+  fetch('/api/sheets', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'read', sheetId: HUDDLE_SHEET_ID, range:'Sheet1!A:K'})
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    const rows = (d && d.result && d.result.values) || [];
+    if (!rows.length) { cb([]); return; }
+    const headers = rows[0].map(function(h){ return h.toLowerCase().trim(); });
+    const iName    = headers.indexOf('name');
+    const iService = headers.indexOf('service');
+    const iReward  = headers.indexOf('reward');
+    const iProduct = headers.indexOf('product');
+    const iDose    = headers.indexOf('last dose');
+    const iDoseDate= headers.indexOf('last dose date');
+    const iWalletU = headers.indexOf('wallet unit');
+    const iWalletA = headers.indexOf('wallet amt');
+    const iLast    = headers.indexOf('last visit');
+    const iPhoto   = headers.indexOf('photo');
+    const iNotes   = headers.indexOf('notes');
+    const parsed = rows.slice(1).filter(function(r){ return r[iName]; }).map(function(r) {
+      return {
+        name:      (r[iName]||'').trim(),
+        service:   r[iService]||'',
+        reward:    r[iReward]||'',
+        product:   r[iProduct]||'',
+        lastDose:  r[iDose]||'',
+        doseDate:  r[iDoseDate]||'',
+        walletU:   r[iWalletU]||'',
+        walletAmt: r[iWalletA]||'',
+        lastVisit: r[iLast]||'',
+        photo:     r[iPhoto]||'',
+        notes:     r[iNotes]||''
+      };
+    });
+    _huddleSheetRows = parsed;
+    cb(parsed);
+  }).catch(function(){ cb([]); });
+}
+
+function eodAMHuddleCard(sheetRows, ptName) {
+  if (!sheetRows || !sheetRows.length) return '';
+  const name = ptName.toLowerCase().trim();
+  const row = sheetRows.find(function(r){ return r.name.toLowerCase() === name; });
+  if (!row) return '';
+  const chips = [];
+  if (row.reward)    chips.push('<span style="background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">Aspire: '+row.reward+'</span>');
+  if (row.walletU)   chips.push('<span style="background:#ede9fe;color:#4c1d95;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">Wallet: '+row.walletU+(row.walletAmt?' / $'+row.walletAmt:'')+'</span>');
+  if (row.product)   chips.push('<span style="background:#ecfdf5;color:#065f46;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">'+row.product+'</span>');
+  if (row.lastDose)  chips.push('<span style="background:#f0f9ff;color:#0c4a6e;padding:2px 7px;border-radius:10px;font-size:10px;">Last dose: '+row.lastDose+(row.doseDate?' ('+row.doseDate+')':'')+'</span>');
+  if (row.photo)     chips.push('<span style="background:'+(row.photo.toLowerCase()==='yes'?'#dcfce7':'#fee2e2')+';color:'+(row.photo.toLowerCase()==='yes'?'#166534':'#991b1b')+';padding:2px 7px;border-radius:10px;font-size:10px;">Photo: '+row.photo+'</span>');
+  const noteLine = row.notes ? '<div style="font-size:11px;color:#6b7280;margin-top:5px;font-style:italic;">📝 '+row.notes+'</div>' : '';
+  if (!chips.length && !noteLine) return '';
+  return '<div style="margin-top:8px;padding:8px 10px;background:#fafaf9;border:1px solid #e5e7eb;border-radius:8px;">'
+    + '<div style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Julianne / Aspire</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:5px;">'+chips.join('')+'</div>'
+    + noteLine
+    + '</div>';
+}
+
 function eodAMLoad() {
   const key = document.getElementById('eod-am-sel').value;
   if (!key) return;
@@ -1393,23 +1455,28 @@ function eodAMLoad() {
     wrap.style.display = 'none';
     return;
   }
-  body.innerHTML = plan.map(function(pt) {
-    if (!pt.name) return '';
-    const actionList = (pt.actions||[]).map(function(a){
-      return '<li style="margin-bottom:4px;font-size:12px;color:var(--cocoa);">'+a+'</li>';
+  // Fetch Julianne's huddle sheet data then render
+  eodAMFetchHuddleSheet(function(sheetRows) {
+    body.innerHTML = plan.map(function(pt) {
+      if (!pt.name) return '';
+      const actionList = (pt.actions||[]).map(function(a){
+        return '<li style="margin-bottom:4px;font-size:12px;color:var(--cocoa);">'+a+'</li>';
+      }).join('');
+      const noteHtml = pt.notes ? '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px;font-style:italic;">Note: '+pt.notes+'</div>' : '';
+      const aspireBadge = eodAMHuddleCard(sheetRows, pt.name);
+      return '<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--white);">'
+        + '<div style="font-weight:700;color:var(--plum);font-size:14px;margin-bottom:6px;">'+pt.name+'</div>'
+        + (actionList ? '<ul style="margin:0 0 0 16px;padding:0;">'+actionList+'</ul>' : '<div style="font-size:12px;color:var(--warm-gray);">No specific action items — standard visit.</div>')
+        + noteHtml
+        + aspireBadge
+        + '<div style="margin-top:8px;">'
+        + '<label style="font-size:10px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">AM prep note / concern (optional)</label>'
+        + '<input id="am-note-'+pt.name.replace(/\s/g,'_')+'" placeholder="e.g. patient anxious, check consent, confirm price..." style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);"/>'
+        + '</div>'
+        + '</div>';
     }).join('');
-    const noteHtml = pt.notes ? '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px;font-style:italic;">Note: '+pt.notes+'</div>' : '';
-    return '<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--white);">'
-      + '<div style="font-weight:700;color:var(--plum);font-size:14px;margin-bottom:6px;">'+pt.name+'</div>'
-      + (actionList ? '<ul style="margin:0 0 0 16px;padding:0;">'+actionList+'</ul>' : '<div style="font-size:12px;color:var(--warm-gray);">No specific action items — standard visit.</div>')
-      + noteHtml
-      + '<div style="margin-top:8px;">'
-      + '<label style="font-size:10px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">AM prep note / concern (optional)</label>'
-      + '<input id="am-note-'+pt.name.replace(/\s/g,'_')+'" placeholder="e.g. patient anxious, check consent, confirm price..." style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--cocoa);"/>'
-      + '</div>'
-      + '</div>';
-  }).join('');
-  wrap.style.display = '';
+    wrap.style.display = '';
+  });
 }
 
 function eodAMSave() {
@@ -1706,12 +1773,45 @@ function eodRecapSubmit() {
   // Save recap to localStorage
   localStorage.setItem('drv_weekly_recap_'+weekKey, JSON.stringify({ state: _eodRecapState, fd: _eodFDState, win: win, hard: hard }));
 
-  // Sync to sheet
+  // Sync to both sheet tabs
   if (sheetRows.length) {
     fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'WeeklyRecap',values:sheetRows})
     }).catch(function(){});
+    fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'append',sheetId:SHEET_ID,tab:'EOD_Recap',values:sheetRows})
+    }).catch(function(){});
   }
+
+  // Build email report and open Gmail compose
+  (function() {
+    const plan = JSON.parse(localStorage.getItem('drv_huddle_plan_'+weekKey)||'[]');
+    const lines = [];
+    lines.push('CLINIC DAY RECAP — ' + weekKey);
+    lines.push('');
+    plan.forEach(function(pt, i) {
+      lines.push('▸ ' + pt.name);
+      (pt.actions||[]).forEach(function(action, ai) {
+        const uid = 'recap-'+i+'-'+ai;
+        const outcome = _eodRecapState[uid]||'—';
+        const why = _eodRecapState[uid+'_why']||'';
+        const whyLabel = why ? ' (' + why.replace(/_/g,' ') + ')' : '';
+        lines.push('  • ' + action + ': ' + outcome + whyLabel);
+      });
+    });
+    lines.push('');
+    if (win) { lines.push('WIN OF THE DAY: ' + win); }
+    if (hard) { lines.push('CHALLENGE: ' + hard); }
+    const fdLines = [];
+    if (_eodFDState.rebook) fdLines.push('Rebook offered: ' + _eodFDState.rebook);
+    if (_eodFDState.review) fdLines.push('Reviews asked: ' + _eodFDState.review);
+    if (fdLines.length) { lines.push(''); lines.push('FRONT DESK:'); fdLines.forEach(function(l){ lines.push('  ' + l); }); }
+    const body = encodeURIComponent(lines.join('\n'));
+    const subject = encodeURIComponent('Clinic Recap — ' + weekKey);
+    const gmailUrl = 'https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(OWNER_EMAIL) + '&su=' + subject + '&body=' + body;
+    // Open in new tab so the submit flow isn't interrupted
+    window.open(gmailUrl, '_blank');
+  })();
 
   // Show teaching points
   const tips = [];
@@ -2416,6 +2516,8 @@ function getPricingText() {
 let planText = '';
 const SHEET_ID = '1JLQkAkGUpSa_TprQMSALS5YIhAy-faYOA6FhB-T8ITI';
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/'+SHEET_ID;
+const HUDDLE_SHEET_ID = '1MyzHlcr6ZC0K3_r_Jx2H_70S2iPqiNHbal6cEYg2Pag'; // daily huddle — Julianne fills Aspire/wallet cols
+const OWNER_EMAIL = 'antiaging@drvaesthetics.com';
 
 function planGoTo(step) {
   ['patient','concerns','plan','docs'].forEach((s,i) => {
